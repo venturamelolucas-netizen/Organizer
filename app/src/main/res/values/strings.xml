@@ -1,0 +1,77 @@
+<resources>
+    <string name="app_name">Organizer</string>
+    <string name="app_subtitle">Produtividade Modular e Foco</string>
+
+    <!-- Navigation & Tabs -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_eisenhower">Eisenhower</string>
+    <string name="nav_settings">Configurações</string>
+
+    <!-- 8 Main Modules -->
+    <string name="module_kanban_title">Kanban</string>
+    <string name="module_kanban_desc">Quadros visuais de fluxo de trabalho</string>
+    
+    <string name="module_kaizen_title">Kaizen</string>
+    <string name="module_kaizen_desc">Melhoria contínua e metas graduais</string>
+
+    <string name="module_pomodoro_title">Pomodoro</string>
+    <string name="module_pomodoro_desc">Foco temporizado e pausas produtivas</string>
+
+    <string name="module_a3_title">Método A3</string>
+    <string name="module_a3_desc">Resolução estruturada de problemas</string>
+
+    <string name="module_5s_title">Método 5S</string>
+    <string name="module_5s_desc">Organização, limpeza e rotinas</string>
+
+    <string name="module_pareto_title">Lei de Pareto com IA</string>
+    <string name="module_pareto_desc">Análise 80/20 de maior impacto</string>
+
+    <string name="module_eisenhower_title">Quadro de Eisenhower</string>
+    <string name="module_eisenhower_desc">Matriz de prioridades e tarefas integradas</string>
+
+    <string name="module_notes_title">Bloco de Notas</string>
+    <string name="module_notes_desc">Anotações e ideias em post-its dinâmicos</string>
+
+    <!-- Eisenhower Quadrants -->
+    <string name="eisenhower_q1_title">Importante e Urgente</string>
+    <string name="eisenhower_q1_subtitle">Faça imediatamente</string>
+    <string name="eisenhower_q2_title">Importante, Não Urgente</string>
+    <string name="eisenhower_q2_subtitle">Planeje e execute</string>
+    <string name="eisenhower_q3_title">Urgente, Não Importante</string>
+    <string name="eisenhower_q3_subtitle">Delegue ou agilize</string>
+    <string name="eisenhower_q4_title">Não Urgente e Não Importante</string>
+    <string name="eisenhower_q4_subtitle">Elimine distrações</string>
+
+    <!-- 5S Steps -->
+    <string name="step_seiri">Seiri</string>
+    <string name="step_seiri_subtitle">Utilização</string>
+    <string name="step_seiton">Seiton</string>
+    <string name="step_seiton_subtitle">Organização</string>
+    <string name="step_seiso">Seiso</string>
+    <string name="step_seiso_subtitle">Limpeza</string>
+    <string name="step_seiketsu_shitsuke">Seiketsu + Shitsuke</string>
+    <string name="step_seiketsu_shitsuke_subtitle">Padronização e Disciplina</string>
+
+    <!-- Common Actions -->
+    <string name="action_add">Adicionar</string>
+    <string name="action_save">Salvar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_delete">Excluir</string>
+    <string name="action_close">Fechar</string>
+    <string name="action_filter">Filtrar</string>
+    <string name="action_search">Pesquisar</string>
+    <string name="action_confirm">Confirmar</string>
+    <string name="action_accept">Aceitar</string>
+    <string name="action_reject">Rejeitar</string>
+    <string name="action_back">Voltar</string>
+    <string name="action_share">Compartilhar</string>
+    <string name="action_sync">Sincronizar</string>
+
+    <!-- Status & Feedback -->
+    <string name="loading">Processando...</string>
+    <string name="offline_notice">Modo offline ativo. Os dados locais estão seguros.</string>
+    <string name="empty_list">Nenhum item cadastrado ainda.</string>
+    <string name="sample_data_loaded">Dados de demonstração carregados com sucesso!</string>
+    <string name="sample_data_cleared">Dados locais limpos com sucesso!</string>
+</resources>

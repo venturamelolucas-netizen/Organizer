@@ -1,0 +1,6 @@
+{
+  "name": "Organizer",
+  "description": "Aplicativo de produtividade modular com Kanban, Kaizen, Pomodoro, Método A3, Método 5S, Análise de Pareto com IA, Matriz de Eisenhower e Bloco de Notas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

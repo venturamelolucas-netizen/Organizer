@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Core Brand Colors -->
+    <color name="primary">#0F172A</color>
+    <color name="primary_variant">#1E293B</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="background_light">#F8FAFC</color>
+    <color name="background_dark">#0F172A</color>
+    <color name="surface_light">#FFFFFF</color>
+    <color name="surface_dark">#1E293B</color>
+    <color name="surface_card_light">#FFFFFF</color>
+    <color name="surface_card_dark">#1E293B</color>
+    <color name="card_stroke_light">#E2E8F0</color>
+    <color name="card_stroke_dark">#334155</color>
+    <color name="divider">#E2E8F0</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="text_tertiary">#94A3B8</color>
+    <color name="text_inverse">#F8FAFC</color>
+
+    <!-- 8 Main Functional Module Colors -->
+    <!-- 1. Kanban -->
+    <color name="module_kanban">#2563EB</color>
+    <color name="module_kanban_light">#EFF6FF</color>
+    <color name="module_kanban_dark">#1D4ED8</color>
+
+    <!-- 2. Kaizen -->
+    <color name="module_kaizen">#10B981</color>
+    <color name="module_kaizen_light">#ECFDF5</color>
+    <color name="module_kaizen_dark">#047857</color>
+
+    <!-- 3. Pomodoro -->
+    <color name="module_pomodoro">#EF4444</color>
+    <color name="module_pomodoro_light">#FEF2F2</color>
+    <color name="module_pomodoro_dark">#DC2626</color>
+
+    <!-- 4. Método A3 -->
+    <color name="module_a3">#4F46E5</color>
+    <color name="module_a3_light">#EEF2FF</color>
+    <color name="module_a3_dark">#4338CA</color>
+
+    <!-- 5. Método 5S -->
+    <color name="module_5s">#059669</color>
+    <color name="module_5s_light">#ECFDF5</color>
+    <color name="module_5s_dark">#047857</color>
+
+    <!-- 6. Lei de Pareto -->
+    <color name="module_pareto">#8B5CF6</color>
+    <color name="module_pareto_light">#F5F3FF</color>
+    <color name="module_pareto_cyan">#06B6D4</color>
+    <color name="module_pareto_dark">#7C3AED</color>
+
+    <!-- 7. Quadro de Eisenhower -->
+    <color name="eisenhower_q1">#DC2626</color> <!-- Importante & Urgente -->
+    <color name="eisenhower_q1_light">#FEF2F2</color>
+    <color name="eisenhower_q2">#F59E0B</color> <!-- Importante, Não Urgente -->
+    <color name="eisenhower_q2_light">#FFFBEB</color>
+    <color name="eisenhower_q3">#3B82F6</color> <!-- Urgente, Não Importante -->
+    <color name="eisenhower_q3_light">#EFF6FF</color>
+    <color name="eisenhower_q4">#9CA3AF</color> <!-- Não Urgente, Não Importante -->
+    <color name="eisenhower_q4_light">#F3F4F6</color>
+
+    <!-- 8. Bloco de Notas -->
+    <color name="module_notes">#FBBF24</color>
+    <color name="module_notes_light">#FEFCE8</color>
+    <color name="module_notes_dark">#D97706</color>
+
+    <!-- Note Sticky Card Palettes -->
+    <color name="note_yellow">#FEF08A</color>
+    <color name="note_green">#BBF7D0</color>
+    <color name="note_blue">#BAE6FD</color>
+    <color name="note_purple">#E9D5FF</color>
+    <color name="note_pink">#FBCFE8</color>
+    <color name="note_orange">#FED7AA</color>
+    <color name="note_white">#FFFFFF</color>
+
+    <!-- Basic Shades -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray_50">#F8FAFC</color>
+    <color name="gray_100">#F1F5F9</color>
+    <color name="gray_200">#E2E8F0</color>
+    <color name="gray_300">#CBD5E1</color>
+    <color name="gray_400">#94A3B8</color>
+    <color name="gray_500">#64748B</color>
+    <color name="gray_600">#475569</color>
+    <color name="gray_700">#334155</color>
+    <color name="gray_800">#1E293B</color>
+    <color name="gray_900">#0F172A</color>
+    <color name="transparent">#00000000</color>
+</resources>
