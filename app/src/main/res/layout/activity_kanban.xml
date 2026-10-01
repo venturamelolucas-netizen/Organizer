@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_light">
+    android:background="@color/app_background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,19 +15,20 @@
             android:id="@+id/toolbar_kanban"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/surface_light"
+            android:background="@color/app_surface"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:title="Kanban"
-            app:titleTextColor="@color/text_primary" />
+            app:titleTextColor="@color/app_text_primary" />
 
-        <!-- Board Selection and New List Bar -->
+        <!-- Board Selection and Actions Bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingHorizontal="16dp"
             android:paddingVertical="8dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:background="@color/app_surface">
 
             <Spinner
                 android:id="@+id/spinner_boards"
@@ -36,16 +37,72 @@
                 android:layout_weight="1"
                 android:background="@drawable/bg_pill" />
 
+            <ImageButton
+                android:id="@+id/btn_edit_board"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Editar Quadro"
+                android:src="@drawable/ic_edit"
+                app:tint="@color/app_text_primary" />
+
+            <ImageButton
+                android:id="@+id/btn_delete_board"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Excluir Quadro"
+                android:src="@drawable/ic_delete"
+                app:tint="@color/module_pomodoro" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_add_board"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="Novo Quadro"
+                android:text="Novo"
                 android:textSize="12sp"
                 app:backgroundTint="@color/module_kanban"
                 app:icon="@drawable/ic_add"
                 style="@style/Widget.MaterialComponents.Button" />
+        </LinearLayout>
+
+        <!-- Empty State Container -->
+        <LinearLayout
+            android:id="@+id/layout_empty_boards"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:contentDescription="Kanban Vazio"
+                android:src="@drawable/ic_kanban"
+                app:tint="@color/app_text_tertiary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Nenhum quadro disponível"
+                android:textColor="@color/app_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="Crie um novo quadro tocando no botão '+ Novo' acima para organizar suas listas e cartões."
+                android:textColor="@color/app_text_secondary"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- Horizontal Scroll of Kanban Columns -->

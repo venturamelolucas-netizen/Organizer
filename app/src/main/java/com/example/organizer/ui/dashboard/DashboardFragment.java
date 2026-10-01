@@ -1,6 +1,8 @@
 package com.example.organizer.ui.dashboard;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,9 +17,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.R;
-import com.example.organizer.data.database.DatabaseClient;
-import com.example.organizer.ui.MainActivity;
 import com.example.organizer.ui.a3.A3Activity;
+import com.example.organizer.ui.eisenhower.EisenhowerActivity;
 import com.example.organizer.ui.fives.FiveSActivity;
 import com.example.organizer.ui.kaizen.KaizenActivity;
 import com.example.organizer.ui.kanban.KanbanActivity;
@@ -27,13 +28,12 @@ import com.example.organizer.ui.pomodoro.PomodoroActivity;
 import com.example.organizer.ui.settings.SettingsActivity;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class DashboardFragment extends Fragment {
 
-    private TextView tvStatTasks;
-    private TextView tvStatKaizen;
-    private TextView tvStatPomodoro;
+    private TextView tvGreeting;
     private RecyclerView rvModules;
 
     @Nullable
@@ -41,9 +41,7 @@ public class DashboardFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_dashboard, container, false);
 
-        tvStatTasks = view.findViewById(R.id.tv_stat_tasks);
-        tvStatKaizen = view.findViewById(R.id.tv_stat_kaizen);
-        tvStatPomodoro = view.findViewById(R.id.tv_stat_pomodoro);
+        tvGreeting = view.findViewById(R.id.tv_greeting);
         rvModules = view.findViewById(R.id.rv_dashboard_modules);
 
         ImageButton btnSettings = view.findViewById(R.id.btn_dashboard_settings);
@@ -52,10 +50,34 @@ public class DashboardFragment extends Fragment {
             startActivity(intent);
         });
 
+        updateGreeting();
         setupModulesGrid();
-        observeStatistics();
 
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateGreeting();
+    }
+
+    private void updateGreeting() {
+        if (getContext() == null || tvGreeting == null) return;
+        SharedPreferences prefs = requireContext().getSharedPreferences("organizer_prefs", Context.MODE_PRIVATE);
+        String userName = prefs.getString("user_name", "Organizador");
+
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        String greetingPrefix;
+        if (hour >= 5 && hour < 12) {
+            greetingPrefix = "Bom dia";
+        } else if (hour >= 12 && hour < 18) {
+            greetingPrefix = "Boa tarde";
+        } else {
+            greetingPrefix = "Boa noite";
+        }
+
+        tvGreeting.setText(greetingPrefix + ", " + userName);
     }
 
     private void setupModulesGrid() {
@@ -140,10 +162,7 @@ public class DashboardFragment extends Fragment {
                     intent = new Intent(requireContext(), ParetoActivity.class);
                     break;
                 case DashboardModuleItem.ID_EISENHOWER:
-                    if (getActivity() instanceof MainActivity) {
-                        ((MainActivity) getActivity()).navigateToEisenhower();
-                        return;
-                    }
+                    intent = new Intent(requireContext(), EisenhowerActivity.class);
                     break;
                 case DashboardModuleItem.ID_NOTES:
                     intent = new Intent(requireContext(), NotesActivity.class);
@@ -156,27 +175,5 @@ public class DashboardFragment extends Fragment {
         });
 
         rvModules.setAdapter(adapter);
-    }
-
-    private void observeStatistics() {
-        DatabaseClient client = DatabaseClient.getInstance(requireContext());
-
-        // Pending Eisenhower Tasks
-        client.getDatabase().eisenhowerDao().getTasksByStatus(false).observe(getViewLifecycleOwner(), tasks -> {
-            int count = (tasks != null) ? tasks.size() : 0;
-            tvStatTasks.setText(String.valueOf(count));
-        });
-
-        // Kaizen Goals
-        client.getDatabase().kaizenDao().getAllGoals().observe(getViewLifecycleOwner(), goals -> {
-            int count = (goals != null) ? goals.size() : 0;
-            tvStatKaizen.setText(String.valueOf(count));
-        });
-
-        // Pomodoro Minutes
-        client.getDatabase().pomodoroDao().getTotalWorkMinutes().observe(getViewLifecycleOwner(), totalMinutes -> {
-            int minutes = (totalMinutes != null) ? totalMinutes : 0;
-            tvStatPomodoro.setText(minutes + " min");
-        });
     }
 }

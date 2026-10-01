@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Core Brand Colors -->
-    <color name="primary">#0F172A</color>
-    <color name="primary_variant">#1E293B</color>
-    <color name="on_primary">#FFFFFF</color>
+    <!-- Adaptive Theme Colors (Light Mode) -->
+    <color name="app_background">#F8FAFC</color>
+    <color name="app_surface">#FFFFFF</color>
+    <color name="app_surface_variant">#F1F5F9</color>
+    <color name="app_card_stroke">#E2E8F0</color>
+    <color name="app_divider">#E2E8F0</color>
+    <color name="app_text_primary">#0F172A</color>
+    <color name="app_text_secondary">#64748B</color>
+    <color name="app_text_tertiary">#94A3B8</color>
+    <color name="app_input_bg">#F8FAFC</color>
+
+    <!-- Legacy Aliases for Compatibility -->
     <color name="background_light">#F8FAFC</color>
     <color name="background_dark">#0F172A</color>
     <color name="surface_light">#FFFFFF</color>
@@ -13,6 +21,11 @@
     <color name="card_stroke_light">#E2E8F0</color>
     <color name="card_stroke_dark">#334155</color>
     <color name="divider">#E2E8F0</color>
+
+    <!-- Core Brand Colors -->
+    <color name="primary">#0F172A</color>
+    <color name="primary_variant">#1E293B</color>
+    <color name="on_primary">#FFFFFF</color>
 
     <!-- Text Colors -->
     <color name="text_primary">#0F172A</color>
@@ -53,13 +66,13 @@
     <color name="module_pareto_dark">#7C3AED</color>
 
     <!-- 7. Quadro de Eisenhower -->
-    <color name="eisenhower_q1">#DC2626</color> <!-- Importante & Urgente -->
+    <color name="eisenhower_q1">#DC2626</color>
     <color name="eisenhower_q1_light">#FEF2F2</color>
-    <color name="eisenhower_q2">#F59E0B</color> <!-- Importante, Não Urgente -->
+    <color name="eisenhower_q2">#F59E0B</color>
     <color name="eisenhower_q2_light">#FFFBEB</color>
-    <color name="eisenhower_q3">#3B82F6</color> <!-- Urgente, Não Importante -->
+    <color name="eisenhower_q3">#3B82F6</color>
     <color name="eisenhower_q3_light">#EFF6FF</color>
-    <color name="eisenhower_q4">#9CA3AF</color> <!-- Não Urgente, Não Importante -->
+    <color name="eisenhower_q4">#9CA3AF</color>
     <color name="eisenhower_q4_light">#F3F4F6</color>
 
     <!-- 8. Bloco de Notas -->

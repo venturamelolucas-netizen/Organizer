@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/app_background">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar_eisenhower"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/app_surface"
+        app:elevation="1dp"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="Quadro de Eisenhower"
+        app:titleTextColor="@color/app_text_primary" />
+
+    <FrameLayout
+        android:id="@+id/eisenhower_fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>

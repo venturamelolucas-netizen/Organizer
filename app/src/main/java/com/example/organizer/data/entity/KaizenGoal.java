@@ -56,7 +56,9 @@ public class KaizenGoal {
     public void setStartDate(long startDate) { this.startDate = startDate; }
 
     public boolean isNotificationEnabled() { return notificationEnabled; }
+    public boolean isNotificationsEnabled() { return notificationEnabled; }
     public void setNotificationEnabled(boolean notificationEnabled) { this.notificationEnabled = notificationEnabled; }
+    public void setNotificationsEnabled(boolean notificationEnabled) { this.notificationEnabled = notificationEnabled; }
 
     public String getNotificationTime() { return notificationTime; }
     public void setNotificationTime(String notificationTime) { this.notificationTime = notificationTime; }

@@ -1,5 +1,7 @@
 package com.example.organizer.ui.kanban;
 
+import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.Context;
 import android.graphics.Paint;
 import android.view.LayoutInflater;
@@ -15,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.R;
 import com.example.organizer.data.entity.KanbanCard;
+import com.example.organizer.data.service.NotificationHelper;
 import com.google.android.material.card.MaterialCardView;
 
 import java.text.SimpleDateFormat;
@@ -29,6 +32,7 @@ public class KanbanCardAdapter extends RecyclerView.Adapter<KanbanCardAdapter.Ca
         void onCardClick(KanbanCard card);
         void onToggleCompleted(KanbanCard card, boolean completed);
         void onDeleteCard(KanbanCard card);
+        void onMoveCard(KanbanCard card);
     }
 
     private final Context context;
@@ -90,9 +94,9 @@ public class KanbanCardAdapter extends RecyclerView.Adapter<KanbanCardAdapter.Ca
         holder.tvPriority.setText(card.getPriority());
         holder.tvPriority.setTextColor(prioColor);
 
-        // Due date
+        // Due date: only show if set (> 0)
         if (card.getDueDate() > 0) {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM", Locale.getDefault());
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
             holder.tvDueDate.setText("Vencimento: " + sdf.format(new Date(card.getDueDate())));
             holder.tvDueDate.setVisibility(View.VISIBLE);
         } else {
@@ -105,6 +109,23 @@ public class KanbanCardAdapter extends RecyclerView.Adapter<KanbanCardAdapter.Ca
 
         holder.btnDelete.setOnClickListener(v -> {
             if (listener != null) listener.onDeleteCard(card);
+        });
+
+        if (holder.btnMove != null) {
+            holder.btnMove.setOnClickListener(v -> {
+                if (listener != null) listener.onMoveCard(card);
+            });
+        }
+
+        // Drag and Drop initiator on long press
+        holder.itemView.setOnLongClickListener(v -> {
+            ClipData.Item item = new ClipData.Item(String.valueOf(card.getId()));
+            ClipData dragData = new ClipData("KANBAN_CARD", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
+            View.DragShadowBuilder shadow = new View.DragShadowBuilder(holder.itemView);
+            holder.itemView.setElevation(14f);
+            v.startDragAndDrop(dragData, shadow, card, 0);
+            NotificationHelper.vibrateFeedback(context, 35);
+            return true;
         });
     }
 
@@ -122,6 +143,7 @@ public class KanbanCardAdapter extends RecyclerView.Adapter<KanbanCardAdapter.Ca
         TextView tvPriority;
         TextView tvDueDate;
         ImageButton btnDelete;
+        ImageButton btnMove;
 
         public CardViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -133,6 +155,7 @@ public class KanbanCardAdapter extends RecyclerView.Adapter<KanbanCardAdapter.Ca
             tvPriority = itemView.findViewById(R.id.tv_card_priority);
             tvDueDate = itemView.findViewById(R.id.tv_card_due_date);
             btnDelete = itemView.findViewById(R.id.btn_delete_card);
+            btnMove = itemView.findViewById(R.id.btn_move_card);
         }
     }
 }

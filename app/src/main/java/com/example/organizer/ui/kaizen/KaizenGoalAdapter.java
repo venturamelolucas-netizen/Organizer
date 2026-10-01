@@ -21,7 +21,7 @@ public class KaizenGoalAdapter extends RecyclerView.Adapter<KaizenGoalAdapter.Go
 
     public interface KaizenListener {
         void onSuggestAi(KaizenGoal goal);
-        void onGoalClick(KaizenGoal goal);
+        void onViewSteps(KaizenGoal goal);
         void onDeleteGoal(KaizenGoal goal);
     }
 
@@ -58,12 +58,24 @@ public class KaizenGoalAdapter extends RecyclerView.Adapter<KaizenGoalAdapter.Go
         holder.pbProgress.setProgress(goal.getProgress());
         holder.tvProgressPercent.setText(goal.getProgress() + "%");
 
+        if (goal.isNotificationsEnabled() && goal.getNotificationTime() != null && !goal.getNotificationTime().isEmpty()) {
+            holder.tvReminder.setText("Lembrete: " + goal.getNotificationTime() + " (" + goal.getNotificationDays() + ")");
+            holder.tvReminder.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvReminder.setText("Sem lembrete ativo");
+            holder.tvReminder.setVisibility(View.VISIBLE);
+        }
+
         holder.btnSuggestAi.setOnClickListener(v -> {
             if (listener != null) listener.onSuggestAi(goal);
         });
 
+        holder.btnViewSteps.setOnClickListener(v -> {
+            if (listener != null) listener.onViewSteps(goal);
+        });
+
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onGoalClick(goal);
+            if (listener != null) listener.onViewSteps(goal);
         });
 
         holder.btnDelete.setOnClickListener(v -> {
@@ -83,6 +95,8 @@ public class KaizenGoalAdapter extends RecyclerView.Adapter<KaizenGoalAdapter.Go
         TextView tvProgressPercent;
         TextView tvCurrentState;
         TextView tvTargetState;
+        TextView tvReminder;
+        View btnViewSteps;
         View btnSuggestAi;
         ImageButton btnDelete;
 
@@ -94,6 +108,8 @@ public class KaizenGoalAdapter extends RecyclerView.Adapter<KaizenGoalAdapter.Go
             tvProgressPercent = itemView.findViewById(R.id.tv_progress_percent);
             tvCurrentState = itemView.findViewById(R.id.tv_current_state);
             tvTargetState = itemView.findViewById(R.id.tv_target_state);
+            tvReminder = itemView.findViewById(R.id.tv_goal_reminder);
+            btnViewSteps = itemView.findViewById(R.id.btn_view_steps);
             btnSuggestAi = itemView.findViewById(R.id.btn_suggest_ai);
             btnDelete = itemView.findViewById(R.id.btn_delete_goal);
         }

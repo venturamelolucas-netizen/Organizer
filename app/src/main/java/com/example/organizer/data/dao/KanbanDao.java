@@ -31,6 +31,15 @@ public interface KanbanDao {
     @Delete
     void deleteBoard(KanbanBoard board);
 
+    @Query("DELETE FROM kanban_cards WHERE listId IN (SELECT id FROM kanban_lists WHERE boardId = :boardId)")
+    void deleteCardsByBoardId(long boardId);
+
+    @Query("DELETE FROM kanban_lists WHERE boardId = :boardId")
+    void deleteListsByBoardId(long boardId);
+
+    @Query("DELETE FROM kanban_cards WHERE listId = :listId")
+    void deleteCardsByListId(long listId);
+
     // Lists
     @Query("SELECT * FROM kanban_lists WHERE boardId = :boardId ORDER BY position ASC")
     LiveData<List<KanbanList>> getListsByBoard(long boardId);

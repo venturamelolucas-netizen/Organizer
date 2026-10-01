@@ -3,22 +3,34 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_light">
+    android:background="@color/app_background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Top Header / Focus Toggle -->
+        <!-- Top Header / Toolbar with Config Action -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar_pomodoro"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/surface_light"
+            android:background="@color/app_surface"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:title="Pomodoro Timer"
-            app:titleTextColor="@color/text_primary" />
+            app:titleTextColor="@color/app_text_primary">
+
+            <ImageButton
+                android:id="@+id/btn_pomodoro_config"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="end"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Configurar Tempos"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/app_text_primary" />
+        </com.google.android.material.appbar.MaterialToolbar>
 
         <!-- Main Timer Content Area -->
         <RelativeLayout
@@ -70,26 +82,16 @@
                         android:id="@+id/tv_pomodoro_countdown"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="10dp"
                         android:fontFamily="monospace"
                         android:text="25:00"
-                        android:textColor="@color/text_primary"
+                        android:textColor="@color/app_text_primary"
                         android:textSize="54sp"
                         android:textStyle="bold" />
-
-                    <!-- Cycle Indicator -->
-                    <TextView
-                        android:id="@+id/tv_pomodoro_cycle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Ciclo 1 de 4"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
                 </LinearLayout>
             </FrameLayout>
 
-            <!-- Control Buttons (Play, Pause, Reset, Skip) -->
+            <!-- Control Buttons (Reset, Play/Pause, Skip) -->
             <LinearLayout
                 android:id="@+id/layout_controls"
                 android:layout_width="wrap_content"
@@ -107,7 +109,8 @@
                     android:layout_marginEnd="20dp"
                     android:background="@drawable/bg_pill"
                     android:contentDescription="Reiniciar"
-                    android:src="@drawable/ic_reset" />
+                    android:src="@drawable/ic_reset"
+                    app:tint="@color/app_text_primary" />
 
                 <!-- Main Play/Pause FAB -->
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -128,21 +131,23 @@
                     android:layout_marginStart="20dp"
                     android:text="Pular"
                     android:textSize="12sp"
+                    android:textColor="@color/app_text_primary"
+                    app:strokeColor="@color/app_card_stroke"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
             </LinearLayout>
 
         </RelativeLayout>
 
-        <!-- Stats & Config Panel (collapsible for Focus Mode) -->
+        <!-- Stats Panel -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_pomodoro_stats"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
-            app:cardBackgroundColor="@color/surface_light"
+            app:cardBackgroundColor="@color/app_surface"
             app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            app:strokeColor="@color/card_stroke_light"
+            app:cardElevation="1dp"
+            app:strokeColor="@color/app_card_stroke"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -170,15 +175,15 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Tempo de Foco"
-                        android:textColor="@color/text_secondary"
+                        android:text="Tempo Total de Foco"
+                        android:textColor="@color/app_text_secondary"
                         android:textSize="11sp" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="1dp"
                     android:layout_height="match_parent"
-                    android:background="@color/divider" />
+                    android:background="@color/app_divider" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -199,8 +204,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Tempo de Pausa"
-                        android:textColor="@color/text_secondary"
+                        android:text="Tempo Total de Descanso"
+                        android:textColor="@color/app_text_secondary"
                         android:textSize="11sp" />
                 </LinearLayout>
             </LinearLayout>

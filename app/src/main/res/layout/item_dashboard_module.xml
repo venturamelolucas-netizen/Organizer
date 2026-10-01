@@ -7,11 +7,10 @@
     android:layout_margin="6dp"
     android:clickable="true"
     android:focusable="true"
-    app:cardBackgroundColor="@color/surface_light"
+    app:cardBackgroundColor="@color/app_surface"
     app:cardCornerRadius="16dp"
-    app:cardElevation="2dp"
-    app:rippleColor="@color/gray_200"
-    app:strokeColor="@color/card_stroke_light"
+    app:cardElevation="1dp"
+    app:strokeColor="@color/app_card_stroke"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -45,8 +44,8 @@
             <!-- Accent Color Strip/Pill Badge -->
             <View
                 android:id="@+id/view_accent_indicator"
-                android:layout_width="8dp"
-                android:layout_height="8dp"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentTop="true"
                 android:layout_marginTop="4dp"
@@ -60,7 +59,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="Kanban"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/app_text_primary"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -72,7 +71,7 @@
             android:ellipsize="end"
             android:maxLines="2"
             android:text="Quadros de fluxo de trabalho"
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/app_text_secondary"
             android:textSize="12sp" />
 
     </LinearLayout>

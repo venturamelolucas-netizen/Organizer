@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Adaptive Theme Colors (Dark Mode) -->
+    <color name="app_background">#0F172A</color>
+    <color name="app_surface">#1E293B</color>
+    <color name="app_surface_variant">#243247</color>
+    <color name="app_card_stroke">#334155</color>
+    <color name="app_divider">#334155</color>
+    <color name="app_text_primary">#F8FAFC</color>
+    <color name="app_text_secondary">#94A3B8</color>
+    <color name="app_text_tertiary">#64748B</color>
+    <color name="app_input_bg">#1E293B</color>
+
+    <!-- Legacy Aliases mapped to Dark Mode -->
+    <color name="background_light">#0F172A</color>
+    <color name="surface_light">#1E293B</color>
+    <color name="surface_card_light">#1E293B</color>
+    <color name="card_stroke_light">#334155</color>
+    <color name="divider">#334155</color>
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_tertiary">#64748B</color>
+
+    <!-- Tint backgrounds for dark mode -->
+    <color name="module_kanban_light">#1E3A8A</color>
+    <color name="module_kaizen_light">#064E3B</color>
+    <color name="module_pomodoro_light">#7F1D1D</color>
+    <color name="module_a3_light">#312E81</color>
+    <color name="module_5s_light">#064E3B</color>
+    <color name="module_pareto_light">#4C1D95</color>
+    <color name="eisenhower_q1_light">#7F1D1D</color>
+    <color name="eisenhower_q2_light">#78350F</color>
+    <color name="eisenhower_q3_light">#1E3A8A</color>
+    <color name="eisenhower_q4_light">#374151</color>
+    <color name="module_notes_light">#78350F</color>
+
+    <color name="note_yellow">#713F12</color>
+    <color name="note_green">#14532D</color>
+    <color name="note_blue">#0C4A6E</color>
+    <color name="note_purple">#581C87</color>
+    <color name="note_pink">#831843</color>
+    <color name="note_orange">#7C2D12</color>
+    <color name="note_white">#1E293B</color>
+</resources>

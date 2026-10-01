@@ -35,12 +35,12 @@ public class A3Activity extends AppCompatActivity {
     private EditText etFollowupResults;
 
     private List<A3Document> docList = new ArrayList<>();
-    private A3Document currentDoc = null;
+    private long selectedDocId = -1;
+    private boolean isUpdatingSpinner = false;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Force landscape orientation per specification
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         setContentView(R.layout.activity_a3);
 
@@ -72,34 +72,58 @@ public class A3Activity extends AppCompatActivity {
                 .observe(this, docs -> {
                     docList = (docs != null) ? docs : new ArrayList<>();
                     if (docList.isEmpty()) {
+                        selectedDocId = -1;
+                        ArrayAdapter<String> emptyAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Nenhum relatório"});
+                        spinnerDocs.setAdapter(emptyAdapter);
                         clearFieldsForNewDoc();
                         return;
                     }
 
                     List<String> titles = new ArrayList<>();
-                    for (A3Document d : docList) {
+                    int targetPosition = 0;
+                    for (int i = 0; i < docList.size(); i++) {
+                        A3Document d = docList.get(i);
                         titles.add(d.getTitle());
+                        if (d.getId() == selectedDocId) {
+                            targetPosition = i;
+                        }
                     }
 
+                    isUpdatingSpinner = true;
                     ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, titles);
                     spinnerDocs.setAdapter(spinnerAdapter);
+                    spinnerDocs.setSelection(targetPosition, false);
+                    isUpdatingSpinner = false;
+
+                    if (selectedDocId == -1 || getDocById(selectedDocId) == null) {
+                        selectedDocId = docList.get(0).getId();
+                        loadDocumentFields(docList.get(0));
+                    }
 
                     spinnerDocs.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                         @Override
                         public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                            currentDoc = docList.get(position);
-                            loadDocumentFields(currentDoc);
+                            if (isUpdatingSpinner) return;
+                            if (position >= 0 && position < docList.size()) {
+                                A3Document chosen = docList.get(position);
+                                if (chosen.getId() != selectedDocId) {
+                                    selectedDocId = chosen.getId();
+                                    loadDocumentFields(chosen);
+                                }
+                            }
                         }
 
                         @Override
                         public void onNothingSelected(AdapterView<?> parent) {}
                     });
-
-                    if (currentDoc == null && !docList.isEmpty()) {
-                        currentDoc = docList.get(0);
-                        loadDocumentFields(currentDoc);
-                    }
                 });
+    }
+
+    private A3Document getDocById(long docId) {
+        for (A3Document d : docList) {
+            if (d.getId() == docId) return d;
+        }
+        return null;
     }
 
     private void loadDocumentFields(A3Document doc) {
@@ -115,7 +139,7 @@ public class A3Activity extends AppCompatActivity {
     }
 
     private void clearFieldsForNewDoc() {
-        currentDoc = null;
+        selectedDocId = -1;
         etTitle.setText("");
         etProblem.setText("");
         etContext.setText("");
@@ -125,7 +149,7 @@ public class A3Activity extends AppCompatActivity {
         etActionPlan.setText("");
         etFollowupResults.setText("");
         etTitle.requestFocus();
-        Toast.makeText(this, "Novo relatório A3 iniciado. Preencha os campos e salve.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Novo relatório A3. Preencha e toque em Salvar.", Toast.LENGTH_SHORT).show();
     }
 
     private void saveCurrentDocument() {
@@ -144,25 +168,25 @@ public class A3Activity extends AppCompatActivity {
         String results = etFollowupResults.getText().toString().trim();
 
         DatabaseClient.getInstance(this).getExecutor().execute(() -> {
-            if (currentDoc != null) {
-                currentDoc.setTitle(title);
-                currentDoc.setProblem(problem);
-                currentDoc.setContext(context);
-                currentDoc.setCurrentConditions(currentCond);
-                currentDoc.setRootCause(rootCause);
-                currentDoc.setImprovementProposals(improvements);
-                currentDoc.setActionPlan(plan);
-                currentDoc.setFollowUpResults(results);
-                currentDoc.setUpdatedAt(System.currentTimeMillis());
+            A3Document existing = (selectedDocId > 0) ? getDocById(selectedDocId) : null;
+            if (existing != null) {
+                existing.setTitle(title);
+                existing.setProblem(problem);
+                existing.setContext(context);
+                existing.setCurrentConditions(currentCond);
+                existing.setRootCause(rootCause);
+                existing.setImprovementProposals(improvements);
+                existing.setActionPlan(plan);
+                existing.setFollowUpResults(results);
+                existing.setUpdatedAt(System.currentTimeMillis());
 
-                DatabaseClient.getInstance(this).getDatabase().a3Dao().updateDocument(currentDoc);
+                DatabaseClient.getInstance(this).getDatabase().a3Dao().updateDocument(existing);
             } else {
                 A3Document newDoc = new A3Document(
                         title, problem, context, currentCond, rootCause, improvements, plan, results, System.currentTimeMillis()
                 );
-                long id = DatabaseClient.getInstance(this).getDatabase().a3Dao().insertDocument(newDoc);
-                newDoc.setId(id);
-                currentDoc = newDoc;
+                long newId = DatabaseClient.getInstance(this).getDatabase().a3Dao().insertDocument(newDoc);
+                selectedDocId = newId;
             }
         });
 
@@ -171,20 +195,23 @@ public class A3Activity extends AppCompatActivity {
     }
 
     private void deleteCurrentDocument() {
-        if (currentDoc == null) {
+        A3Document toDelete = getDocById(selectedDocId);
+        if (toDelete == null) {
             Toast.makeText(this, "Nenhum documento selecionado para exclusão.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         new AlertDialog.Builder(this)
                 .setTitle("Excluir Relatório A3")
-                .setMessage("Deseja realmente excluir \"" + currentDoc.getTitle() + "\"?")
-                .setPositiveButton("Excluir", (d, w) -> {
+                .setMessage("Deseja realmente excluir \"" + toDelete.getTitle() + "\"?\nEsta ação é permanente.")
+                .setPositiveButton("Excluir Definitivamente", (d, w) -> {
+                    long id = toDelete.getId();
                     DatabaseClient.getInstance(this).getExecutor().execute(() -> {
-                        DatabaseClient.getInstance(this).getDatabase().a3Dao().deleteDocument(currentDoc);
+                        DatabaseClient.getInstance(this).getDatabase().a3Dao().deleteDocument(toDelete);
                     });
-                    currentDoc = null;
+                    selectedDocId = -1;
                     clearFieldsForNewDoc();
+                    Toast.makeText(this, "Relatório A3 excluído.", Toast.LENGTH_SHORT).show();
                     NotificationHelper.vibrateFeedback(this, 40);
                 })
                 .setNegativeButton("Cancelar", null)

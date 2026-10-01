@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="20dp"
-    android:background="@color/surface_light">
+    android:background="@color/app_surface">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,7 +18,7 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="16dp"
             android:background="@drawable/bg_pill"
-            android:backgroundTint="@color/gray_300" />
+            android:backgroundTint="@color/app_card_stroke" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -31,14 +31,14 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_sparkles"
-                app:tint="@color/module_pareto" />
+                app:tint="@color/module_kaizen" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:text="Sugestão de Progressão Kaizen (IA)"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/app_text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -48,7 +48,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Analisando objetivo..."
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/app_text_secondary"
             android:textSize="13sp"
             android:layout_marginBottom="16dp" />
 
@@ -67,9 +67,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/gray_50"
+            app:cardBackgroundColor="@color/app_surface_variant"
             app:cardCornerRadius="12dp"
-            app:strokeColor="@color/card_stroke_light"
+            app:strokeColor="@color/app_card_stroke"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -84,7 +84,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
                     android:text="Fundamento gradual sugerido:"
-                    android:textColor="@color/module_kaizen_dark"
+                    android:textColor="@color/module_kaizen"
                     android:textSize="13sp"
                     android:textStyle="italic" />
 
@@ -94,8 +94,53 @@
                     android:layout_height="wrap_content"
                     android:lineSpacingExtra="6dp"
                     android:text="1. Micro-etapa 1\n2. Micro-etapa 2\n3. Micro-etapa 3\n4. Micro-etapa 4"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/app_text_primary"
                     android:textSize="14sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Notification Suggestion Box -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_ai_notif"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/app_surface_variant"
+            app:cardCornerRadius="12dp"
+            app:strokeColor="@color/app_card_stroke"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Lembretes Sugeridos pela IA"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_ai_notif_suggestion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Horário sugerido: 20:30 (Todos os dias)"
+                    android:textColor="@color/app_text_secondary"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_ai_apply_notif"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Agendar este lembrete ao aceitar"
+                    android:textColor="@color/app_text_primary"
+                    android:checked="true" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -111,7 +156,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="6dp"
-                android:text="@string/action_reject"
+                android:text="Nova Sugestão"
                 android:textColor="@color/module_pomodoro"
                 style="@style/Widget.MaterialComponents.Button.TextButton" />
 

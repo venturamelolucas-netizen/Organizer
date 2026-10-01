@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="8dp"
+    android:paddingHorizontal="4dp">
+
+    <CheckBox
+        android:id="@+id/cb_step_achieved"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="8dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_step_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Etapa 1: Caminhar 10 minutos"
+            android:textColor="@color/app_text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_step_status_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Próxima Etapa Liberada"
+            android:textColor="@color/module_kaizen"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btn_delete_step"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Excluir Etapa"
+        android:src="@drawable/ic_delete"
+        app:tint="@color/app_text_secondary" />
+</LinearLayout>

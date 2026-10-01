@@ -1,6 +1,8 @@
 package com.example.organizer.ui.kanban;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.view.DragEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,6 +10,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -18,6 +21,7 @@ import com.example.organizer.data.database.DatabaseClient;
 import com.example.organizer.data.entity.KanbanCard;
 import com.example.organizer.data.entity.KanbanList;
 import com.example.organizer.data.service.NotificationHelper;
+import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,6 +33,9 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
         void onAddCard(KanbanList list);
         void onEditCard(KanbanCard card);
         void onDeleteList(KanbanList list);
+        void onEditList(KanbanList list);
+        void onMoveCardToColumn(KanbanCard card, KanbanList targetList);
+        void onOpenMoveCardDialog(KanbanCard card);
     }
 
     private final Context context;
@@ -45,6 +52,10 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
     public void setLists(List<KanbanList> newLists) {
         this.lists = (newLists != null) ? newLists : new ArrayList<>();
         notifyDataSetChanged();
+    }
+
+    public List<KanbanList> getLists() {
+        return lists;
     }
 
     @NonNull
@@ -81,12 +92,17 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
                 });
                 NotificationHelper.vibrateFeedback(context, 50);
             }
+
+            @Override
+            public void onMoveCard(KanbanCard card) {
+                if (listener != null) listener.onOpenMoveCardDialog(card);
+            }
         });
 
         holder.rvCards.setLayoutManager(new LinearLayoutManager(context));
         holder.rvCards.setAdapter(cardAdapter);
 
-        // Attach Drag-and-Drop ItemTouchHelper
+        // Internal Drag-and-Drop Reordering (UP/DOWN within list)
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
                 ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
             @Override
@@ -94,6 +110,9 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
                 int fromPos = viewHolder.getAdapterPosition();
                 int toPos = target.getAdapterPosition();
                 List<KanbanCard> currentCards = cardAdapter.getCards();
+                if (fromPos < 0 || toPos < 0 || fromPos >= currentCards.size() || toPos >= currentCards.size()) {
+                    return false;
+                }
                 if (fromPos < toPos) {
                     for (int i = fromPos; i < toPos; i++) {
                         Collections.swap(currentCards, i, i + 1);
@@ -122,7 +141,7 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
             public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
                 super.onSelectedChanged(viewHolder, actionState);
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
-                    viewHolder.itemView.setElevation(12f);
+                    viewHolder.itemView.setElevation(14f);
                     NotificationHelper.vibrateFeedback(context, 35);
                 }
             }
@@ -138,6 +157,42 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
         });
         itemTouchHelper.attachToRecyclerView(holder.rvCards);
 
+        // Cross-Column Drag and Drop Listener on Column
+        View.OnDragListener columnDragListener = (v, event) -> {
+            switch (event.getAction()) {
+                case DragEvent.ACTION_DRAG_STARTED:
+                    return true;
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    holder.cardRoot.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.module_kanban)));
+                    holder.cardRoot.setStrokeWidth(4);
+                    holder.cardRoot.setElevation(8f);
+                    return true;
+                case DragEvent.ACTION_DRAG_EXITED:
+                case DragEvent.ACTION_DRAG_ENDED:
+                    holder.cardRoot.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.app_card_stroke)));
+                    holder.cardRoot.setStrokeWidth(1);
+                    holder.cardRoot.setElevation(2f);
+                    return true;
+                case DragEvent.ACTION_DROP:
+                    holder.cardRoot.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.app_card_stroke)));
+                    holder.cardRoot.setStrokeWidth(1);
+                    holder.cardRoot.setElevation(2f);
+                    Object localState = event.getLocalState();
+                    if (localState instanceof KanbanCard) {
+                        KanbanCard draggedCard = (KanbanCard) localState;
+                        if (listener != null) {
+                            listener.onMoveCardToColumn(draggedCard, list);
+                        }
+                    }
+                    NotificationHelper.vibrateFeedback(context, 50);
+                    return true;
+            }
+            return true;
+        };
+
+        holder.cardRoot.setOnDragListener(columnDragListener);
+        holder.rvCards.setOnDragListener(columnDragListener);
+
         // Observe cards for this list
         DatabaseClient.getInstance(context)
                 .getDatabase()
@@ -152,6 +207,12 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
             if (listener != null) listener.onAddCard(list);
         });
 
+        if (holder.btnEditList != null) {
+            holder.btnEditList.setOnClickListener(v -> {
+                if (listener != null) listener.onEditList(list);
+            });
+        }
+
         holder.btnDeleteList.setOnClickListener(v -> {
             if (listener != null) listener.onDeleteList(list);
         });
@@ -163,16 +224,20 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
     }
 
     static class ColumnViewHolder extends RecyclerView.ViewHolder {
+        MaterialCardView cardRoot;
         TextView tvTitle;
         TextView tvCount;
+        ImageButton btnEditList;
         ImageButton btnDeleteList;
         RecyclerView rvCards;
         View btnAddCard;
 
         public ColumnViewHolder(@NonNull View itemView) {
             super(itemView);
+            cardRoot = itemView.findViewById(R.id.card_column_root);
             tvTitle = itemView.findViewById(R.id.tv_column_title);
             tvCount = itemView.findViewById(R.id.tv_column_count);
+            btnEditList = itemView.findViewById(R.id.btn_edit_list);
             btnDeleteList = itemView.findViewById(R.id.btn_delete_list);
             rvCards = itemView.findViewById(R.id.rv_column_cards);
             btnAddCard = itemView.findViewById(R.id.btn_add_card_in_list);

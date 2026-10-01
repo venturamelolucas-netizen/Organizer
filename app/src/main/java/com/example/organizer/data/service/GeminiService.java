@@ -7,6 +7,8 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.example.BuildConfig;
+import com.example.organizer.data.entity.KaizenGoal;
+import com.example.organizer.data.entity.KaizenProgress;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -26,7 +28,8 @@ import okhttp3.Response;
 
 public class GeminiService {
 
-    private static final String MODEL_NAME = "gemini-3.5-flash";
+    // Centralized model configuration supported in current environment
+    private static final String MODEL_NAME = "gemini-2.5-flash";
     private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_NAME + ":generateContent";
 
     private final OkHttpClient httpClient;
@@ -41,10 +44,14 @@ public class GeminiService {
     public static class KaizenSuggestionResult {
         public List<String> steps;
         public String rationale;
+        public String suggestedReminderTime;
+        public String suggestedReminderDays;
 
-        public KaizenSuggestionResult(List<String> steps, String rationale) {
+        public KaizenSuggestionResult(List<String> steps, String rationale, String suggestedReminderTime, String suggestedReminderDays) {
             this.steps = steps;
             this.rationale = rationale;
+            this.suggestedReminderTime = suggestedReminderTime;
+            this.suggestedReminderDays = suggestedReminderDays;
         }
     }
 
@@ -101,27 +108,62 @@ public class GeminiService {
         return null;
     }
 
-    public void suggestKaizenProgression(Context context, String goalTitle, String currentState, String targetState, ApiCallback<KaizenSuggestionResult> callback) {
+    public void suggestKaizenProgression(
+            Context context,
+            KaizenGoal goal,
+            List<KaizenProgress> existingSteps,
+            String rejectedSuggestion,
+            ApiCallback<KaizenSuggestionResult> callback
+    ) {
         if (!isNetworkAvailable(context)) {
-            // Provide offline intelligent fallback
-            mainHandler.post(() -> callback.onSuccess(getOfflineKaizenFallback(goalTitle, currentState, targetState)));
+            mainHandler.post(() -> callback.onError("Sem conexão com a internet. Verifique sua rede e tente novamente."));
             return;
         }
 
         String apiKey = getApiKey();
         if (apiKey == null) {
-            mainHandler.post(() -> callback.onSuccess(getOfflineKaizenFallback(goalTitle, currentState, targetState)));
+            mainHandler.post(() -> callback.onError("Chave da API Gemini não configurada nos Segredos do app. Configure GEMINI_API_KEY para gerar sugestões com IA."));
             return;
         }
 
         executor.execute(() -> {
             try {
-                String prompt = "Você é um especialista no método Kaizen de melhoria contínua gradual. " +
-                        "Analise o objetivo: \"" + goalTitle + "\", Situação atual: \"" + currentState + "\", Meta final: \"" + targetState + "\". " +
-                        "Retorne EXCLUSIVAMENTE um objeto JSON válido (sem tags markdown ```json) no seguinte formato: " +
-                        "{\"steps\": [\"Etapa 1: ...\", \"Etapa 2: ...\", \"Etapa 3: ...\", \"Etapa 4: ...\"], \"rationale\": \"Explicação breve do método gradual\"}";
+                StringBuilder contextBuilder = new StringBuilder();
+                contextBuilder.append("Você é um especialista em melhoria contínua e metodologia Kaizen (evolução em micro-etapas de 1%).\n");
+                contextBuilder.append("Analise detalhadamente o seguinte objetivo do usuário:\n");
+                contextBuilder.append("- Título: \"").append(goal.getTitle()).append("\"\n");
+                if (goal.getDescription() != null && !goal.getDescription().isEmpty()) {
+                    contextBuilder.append("- Descrição/Motivação: \"").append(goal.getDescription()).append("\"\n");
+                }
+                contextBuilder.append("- Situação Atual: \"").append(goal.getCurrentState()).append("\"\n");
+                contextBuilder.append("- Meta Desejada: \"").append(goal.getTargetState()).append("\"\n");
+                contextBuilder.append("- Progresso Atual: ").append(goal.getProgress()).append("%\n");
+                contextBuilder.append("- Frequência pretendida: \"").append(goal.getFrequency()).append("\"\n");
+                contextBuilder.append("- Horário/Dias de lembrete atual: \"").append(goal.getNotificationTime()).append(" - ").append(goal.getNotificationDays()).append("\"\n");
 
-                String responseBody = callGeminiApi(apiKey, prompt);
+                if (existingSteps != null && !existingSteps.isEmpty()) {
+                    contextBuilder.append("- Etapas já registradas:\n");
+                    for (KaizenProgress p : existingSteps) {
+                        contextBuilder.append("  * ").append(p.getStepTitle())
+                                .append(" [").append(p.isAchieved() ? "Concluída" : "Pendente").append("]\n");
+                    }
+                }
+
+                if (rejectedSuggestion != null && !rejectedSuggestion.trim().isEmpty()) {
+                    contextBuilder.append("\nATENÇÃO: O usuário rejeitou a seguinte sugestão anterior:\n\"")
+                            .append(rejectedSuggestion)
+                            .append("\"\nPor favor, adote uma abordagem/estratégia COMPLETAMENTE DIFERENTE, com outro ritmo ou forma de progressão gradual.\n");
+                }
+
+                contextBuilder.append("\nRetorne EXCLUSIVAMENTE um objeto JSON válido (sem marcadores ```json ou markdown) com a seguinte estrutura:\n");
+                contextBuilder.append("{\n");
+                contextBuilder.append("  \"steps\": [\"Etapa 1: ...\", \"Etapa 2: ...\", \"Etapa 3: ...\", \"Etapa 4: ...\"],\n");
+                contextBuilder.append("  \"rationale\": \"Explicação breve de como essa progressão gradual evita atrito cognitivo e cria consistência\",\n");
+                contextBuilder.append("  \"suggestedReminderTime\": \"HH:mm\",\n");
+                contextBuilder.append("  \"suggestedReminderDays\": \"Ex: Todos os dias ou Seg, Qua, Sex\"\n");
+                contextBuilder.append("}\n");
+
+                String responseBody = callGeminiApi(apiKey, contextBuilder.toString());
                 JSONObject json = parseJsonResponse(responseBody);
 
                 List<String> steps = new ArrayList<>();
@@ -131,50 +173,53 @@ public class GeminiService {
                         steps.add(stepsArray.getString(i));
                     }
                 }
-                String rationale = json.optString("rationale", "Progressão gradual baseada em micro-hábitos e constância diária.");
+                String rationale = json.optString("rationale", "Progressão gradual baseada em micro-hábitos incrementais.");
+                String suggestedTime = json.optString("suggestedReminderTime", "20:00");
+                String suggestedDays = json.optString("suggestedReminderDays", "Todos os dias");
 
-                KaizenSuggestionResult result = new KaizenSuggestionResult(steps, rationale);
+                KaizenSuggestionResult result = new KaizenSuggestionResult(steps, rationale, suggestedTime, suggestedDays);
                 mainHandler.post(() -> callback.onSuccess(result));
 
             } catch (Exception e) {
-                // Fallback gracefully on parsing/network failure
-                mainHandler.post(() -> callback.onSuccess(getOfflineKaizenFallback(goalTitle, currentState, targetState)));
+                mainHandler.post(() -> callback.onError("Falha na comunicação com o Gemini: " + e.getMessage() + ". Tente novamente."));
             }
         });
     }
 
     public void analyzePareto(Context context, String userReport, ApiCallback<ParetoAnalysisResult> callback) {
         if (!isNetworkAvailable(context)) {
-            mainHandler.post(() -> callback.onSuccess(getOfflineParetoFallback(userReport)));
+            mainHandler.post(() -> callback.onError("Sem conexão com a internet. Conecte-se para que o Gemini analise seu relato."));
             return;
         }
 
         String apiKey = getApiKey();
         if (apiKey == null) {
-            mainHandler.post(() -> callback.onSuccess(getOfflineParetoFallback(userReport)));
+            mainHandler.post(() -> callback.onError("Chave da API Gemini não configurada nos Segredos do app. Configure GEMINI_API_KEY para habilitar a análise com IA."));
             return;
         }
 
         executor.execute(() -> {
             try {
-                String prompt = "Você é um especialista em produtividade e no Princípio de Pareto (Lei 80/20). " +
-                        "Analise o relato do usuário sobre a rotina/trabalho dele: \"" + userReport + "\". " +
-                        "Identifique as 20% das causas/atividades que geram 80% do impacto positivo, e as demais atividades de menor retorno. " +
-                        "Retorne EXCLUSIVAMENTE um objeto JSON válido (sem marcadores markdown ```json) com a estrutura: " +
-                        "{" +
-                        "  \"summary\": \"Resumo objetivo em 1 ou 2 frases\"," +
-                        "  \"explanation\": \"Explicação concisa do raciocínio 80/20 aplicado ao relato\"," +
-                        "  \"factors\": [" +
-                        "    {\"title\": \"Fator crítico 1\", \"impactPercentage\": 50, \"isTopTwenty\": true}," +
-                        "    {\"title\": \"Fator crítico 2\", \"impactPercentage\": 30, \"isTopTwenty\": true}," +
-                        "    {\"title\": \"Fator secundário 1\", \"impactPercentage\": 10, \"isTopTwenty\": false}," +
-                        "    {\"title\": \"Fator secundário 2\", \"impactPercentage\": 10, \"isTopTwenty\": false}" +
-                        "  ]," +
-                        "  \"recommendations\": [" +
-                        "    \"Recomendação prática 1\"," +
-                        "    \"Recomendação prática 2\"," +
-                        "    \"Recomendação prática 3\"" +
-                        "  ]" +
+                String prompt = "Você é um especialista em produtividade, eficiência operacional e no Princípio de Pareto (Lei 80/20).\n" +
+                        "Analise criticamente o seguinte relato REAL fornecido pelo usuário:\n" +
+                        "\"" + userReport + "\"\n\n" +
+                        "Identifique as causas, atividades ou fatores vitais que geram aproximadamente 80% do retorno ou impacto, " +
+                        "e os fatores secundários de menor alavancagem.\n" +
+                        "Retorne EXCLUSIVAMENTE um objeto JSON válido (sem marcadores ```json ou formatação markdown) com o formato exato:\n" +
+                        "{\n" +
+                        "  \"summary\": \"Resumo executivo da análise do relato em 1 a 2 frases\",\n" +
+                        "  \"explanation\": \"Explicação lógica fundamentando a distribuição 80/20 no caso específico\",\n" +
+                        "  \"factors\": [\n" +
+                        "    {\"title\": \"Fator Crítico 1\", \"impactPercentage\": 50, \"isTopTwenty\": true},\n" +
+                        "    {\"title\": \"Fator Crítico 2\", \"impactPercentage\": 30, \"isTopTwenty\": true},\n" +
+                        "    {\"title\": \"Fator Secundário 1\", \"impactPercentage\": 12, \"isTopTwenty\": false},\n" +
+                        "    {\"title\": \"Fator Secundário 2\", \"impactPercentage\": 8, \"isTopTwenty\": false}\n" +
+                        "  ],\n" +
+                        "  \"recommendations\": [\n" +
+                        "    \"Recomendação prática 1\",\n" +
+                        "    \"Recomendação prática 2\",\n" +
+                        "    \"Recomendação prática 3\"\n" +
+                        "  ]\n" +
                         "}";
 
                 String responseBody = callGeminiApi(apiKey, prompt);
@@ -208,9 +253,27 @@ public class GeminiService {
                 mainHandler.post(() -> callback.onSuccess(result));
 
             } catch (Exception e) {
-                mainHandler.post(() -> callback.onSuccess(getOfflineParetoFallback(userReport)));
+                mainHandler.post(() -> callback.onError("Não foi possível processar a análise com Gemini: " + e.getMessage() + ". Tente novamente."));
             }
         });
+    }
+
+    public static ParetoAnalysisResult getLocalDemoParetoAnalysis() {
+        String summary = "[Demonstração Local] Análise 80/20 de rotina padrão de trabalho e estudos.";
+        String explanation = "Demonstração: Aproximadamente 20% das suas ações diárias geram 80% do rendimento. Focar em tarefas de alta concentração gera a maior alavancagem.";
+
+        List<ParetoFactor> factors = new ArrayList<>();
+        factors.add(new ParetoFactor("Trabalho Focado em Entregas Principais", 55, true));
+        factors.add(new ParetoFactor("Planejamento e Priorização Matinal", 25, true));
+        factors.add(new ParetoFactor("Respostas a Mensagens e E-mails", 12, false));
+        factors.add(new ParetoFactor("Reuniões sem Pauta Definida", 8, false));
+
+        List<String> recommendations = new ArrayList<>();
+        recommendations.add("Proteja suas primeiras horas da manhã com blocos de trabalho ininterrupto.");
+        recommendations.add("Agrupe a leitura de mensagens em duas janelas específicas ao longo do dia.");
+        recommendations.add("Elimine ou delegue demandas de baixo impacto.");
+
+        return new ParetoAnalysisResult(summary, factors, recommendations, explanation);
     }
 
     private String callGeminiApi(String apiKey, String prompt) throws IOException {
@@ -244,7 +307,8 @@ public class GeminiService {
 
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
-                    throw new IOException("Unexpected response code: " + response.code());
+                    String errBody = response.body() != null ? response.body().string() : "";
+                    throw new IOException("HTTP " + response.code() + ": " + errBody);
                 }
                 return response.body() != null ? response.body().string() : "";
             }
@@ -261,7 +325,6 @@ public class GeminiService {
         JSONArray parts = content.getJSONArray("parts");
         String text = parts.getJSONObject(0).getString("text").trim();
 
-        // Strip Markdown code block if present
         if (text.startsWith("```json")) {
             text = text.substring(7);
         } else if (text.startsWith("```")) {
@@ -273,34 +336,5 @@ public class GeminiService {
         text = text.trim();
 
         return new JSONObject(text);
-    }
-
-    private KaizenSuggestionResult getOfflineKaizenFallback(String goalTitle, String currentState, String targetState) {
-        List<String> steps = new ArrayList<>();
-        steps.add("Etapa 1: Estabelecer ancoragem do hábito (focar na consistência mínima nos primeiros 7 dias)");
-        steps.add("Etapa 2: Aumentar gradualmente em 20% a intensidade ou frequência semanal");
-        steps.add("Etapa 3: Avaliar pontos de atrito e consolidar a rotina intermediária");
-        steps.add("Etapa 4: Atingir a meta pretendida de \"" + targetState + "\" com estabilidade");
-
-        String rationale = "Princípio Kaizen: melhorias incrementais de 1% reduzem a resistência cognitiva e garantem retenção de longo prazo sem estresse de ruptura.";
-        return new KaizenSuggestionResult(steps, rationale);
-    }
-
-    private ParetoAnalysisResult getOfflineParetoFallback(String userReport) {
-        String summary = "Análise 80/20: Identificação dos fatores com maior alavancagem de resultados.";
-        String explanation = "Aproximadamente 20% das suas ações diárias são responsáveis por 80% do seu rendimento e clareza mental. Focar nessas prioridades vitais reduz o tempo gasto com tarefas secundárias.";
-
-        List<ParetoFactor> factors = new ArrayList<>();
-        factors.add(new ParetoFactor("Atividades de Foco Profundo e Resolução Direta", 55, true));
-        factors.add(new ParetoFactor("Planejamento Prévio e Priorização Matinal", 25, true));
-        factors.add(new ParetoFactor("Comunicações Reativas e Checagem de Mensagens", 12, false));
-        factors.add(new ParetoFactor("Tarefas Acessórias e Ajustes Menores", 8, false));
-
-        List<String> recommendations = new ArrayList<>();
-        recommendations.add("Bloqueie as primeiras 2 horas do dia para tarefas do quadrante Importante (20% vital).");
-        recommendations.add("Agrupe comunicações e mensagens em 2 janelas fixas para evitar quebra de foco.");
-        recommendations.add("Elimine ou automatize demandas repetitivas que tomam tempo sem gerar valor direto.");
-
-        return new ParetoAnalysisResult(summary, factors, recommendations, explanation);
     }
 }
