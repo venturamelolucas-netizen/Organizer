@@ -350,7 +350,8 @@ public class FiveSActivity extends AppCompatActivity implements FiveSItemAdapter
             NotificationHelper.scheduleRoutineNotification(
                     this,
                     item.getId(),
-                    (int) item.getId() + 6000,
+                    -1L,
+                    NotificationHelper.OFFSET_FIVES + (int) item.getId(),
                     "Rotina 5S: " + item.getName(),
                     "Hora de executar sua rotina de 5S (" + item.getRoutineTime() + ").",
                     NotificationHelper.CHANNEL_FIVES,
@@ -360,7 +361,7 @@ public class FiveSActivity extends AppCompatActivity implements FiveSItemAdapter
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM 'às' HH:mm", Locale.getDefault());
             Toast.makeText(this, "Lembrete ativado para " + sdf.format(new Date(nextOccurrence)), Toast.LENGTH_SHORT).show();
         } else {
-            NotificationHelper.cancelNotification(this, (int) item.getId() + 6000);
+            NotificationHelper.cancelNotification(this, NotificationHelper.OFFSET_FIVES + (int) item.getId());
             Toast.makeText(this, "Lembrete desativado", Toast.LENGTH_SHORT).show();
         }
 
@@ -378,7 +379,7 @@ public class FiveSActivity extends AppCompatActivity implements FiveSItemAdapter
             return;
         }
 
-        if (NotificationHelper.isYesterday(item.getLastExecutionDate())) {
+        if (NotificationHelper.isStreakContinued(item.getLastExecutionDate(), item.getRoutineDays())) {
             item.setStreakCount(item.getStreakCount() + 1);
         } else {
             item.setStreakCount(1);
@@ -442,7 +443,8 @@ public class FiveSActivity extends AppCompatActivity implements FiveSItemAdapter
                             NotificationHelper.scheduleRoutineNotification(
                                     this,
                                     item.getId(),
-                                    (int) item.getId() + 6000,
+                                    -1L,
+                                    NotificationHelper.OFFSET_FIVES + (int) item.getId(),
                                     "Rotina 5S: " + item.getName(),
                                     "Hora de executar sua rotina de 5S.",
                                     NotificationHelper.CHANNEL_FIVES,
@@ -467,7 +469,7 @@ public class FiveSActivity extends AppCompatActivity implements FiveSItemAdapter
                 .setTitle("Excluir Rotina")
                 .setMessage("Deseja realmente excluir a rotina \"" + item.getName() + "\"?")
                 .setPositiveButton("Excluir", (d, w) -> {
-                    NotificationHelper.cancelNotification(this, (int) item.getId() + 6000);
+                    NotificationHelper.cancelNotification(this, NotificationHelper.OFFSET_FIVES + (int) item.getId());
                     DatabaseClient.getInstance(this).getExecutor().execute(() -> {
                         DatabaseClient.getInstance(this).getDatabase().fiveSDao().deleteItem(item);
                     });

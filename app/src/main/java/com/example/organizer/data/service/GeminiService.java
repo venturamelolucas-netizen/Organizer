@@ -203,22 +203,20 @@ public class GeminiService {
                 String prompt = "Você é um especialista em produtividade, eficiência operacional e no Princípio de Pareto (Lei 80/20).\n" +
                         "Analise criticamente o seguinte relato REAL fornecido pelo usuário:\n" +
                         "\"" + userReport + "\"\n\n" +
-                        "Identifique as causas, atividades ou fatores vitais que geram aproximadamente 80% do retorno ou impacto, " +
+                        "Identifique as causas, atividades ou fatores vitais que geram a maior parte do impacto ou retorno (os 20% vitais), " +
                         "e os fatores secundários de menor alavancagem.\n" +
+                        "DIRETRIZ DE HONESTIDADE MÉTRICA: Não invente métricas falsas nem invente números não fornecidos. Se o relato contiver números ou dados quantitativos, use-os e reflita-os nos percentuais. Se o relato for puramente qualitativo (sem números), use estimativas proporcionais lógicas de impacto relativo baseadas em prioridade (onde a soma dos fatores se aproxime de 100), e explicite claramente na explicação que as proporções são estimativas qualitativas relativas.\n" +
                         "Retorne EXCLUSIVAMENTE um objeto JSON válido (sem marcadores ```json ou formatação markdown) com o formato exato:\n" +
                         "{\n" +
                         "  \"summary\": \"Resumo executivo da análise do relato em 1 a 2 frases\",\n" +
                         "  \"explanation\": \"Explicação lógica fundamentando a distribuição 80/20 no caso específico\",\n" +
                         "  \"factors\": [\n" +
-                        "    {\"title\": \"Fator Crítico 1\", \"impactPercentage\": 50, \"isTopTwenty\": true},\n" +
-                        "    {\"title\": \"Fator Crítico 2\", \"impactPercentage\": 30, \"isTopTwenty\": true},\n" +
-                        "    {\"title\": \"Fator Secundário 1\", \"impactPercentage\": 12, \"isTopTwenty\": false},\n" +
-                        "    {\"title\": \"Fator Secundário 2\", \"impactPercentage\": 8, \"isTopTwenty\": false}\n" +
+                        "    {\"title\": \"Nome do Fator Vital\", \"impactPercentage\": 50, \"isTopTwenty\": true},\n" +
+                        "    {\"title\": \"Nome do Fator Secundário\", \"impactPercentage\": 20, \"isTopTwenty\": false}\n" +
                         "  ],\n" +
                         "  \"recommendations\": [\n" +
                         "    \"Recomendação prática 1\",\n" +
-                        "    \"Recomendação prática 2\",\n" +
-                        "    \"Recomendação prática 3\"\n" +
+                        "    \"Recomendação prática 2\"\n" +
                         "  ]\n" +
                         "}";
 
@@ -233,11 +231,10 @@ public class GeminiService {
                 if (factorsArr != null) {
                     for (int i = 0; i < factorsArr.length(); i++) {
                         JSONObject fObj = factorsArr.getJSONObject(i);
-                        factors.add(new ParetoFactor(
-                                fObj.getString("title"),
-                                fObj.getInt("impactPercentage"),
-                                fObj.getBoolean("isTopTwenty")
-                        ));
+                        String title = fObj.optString("title", "Fator " + (i + 1));
+                        int pct = fObj.optInt("impactPercentage", 0);
+                        boolean isTop = fObj.optBoolean("isTopTwenty", i < 2 || pct >= 25);
+                        factors.add(new ParetoFactor(title, pct, isTop));
                     }
                 }
 

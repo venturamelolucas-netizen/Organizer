@@ -19,6 +19,9 @@ public interface A3Dao {
     @Query("SELECT * FROM a3_documents WHERE id = :id LIMIT 1")
     A3Document getDocumentById(long id);
 
+    @Query("SELECT COUNT(*) FROM a3_documents")
+    int getDocumentCount();
+
     @Insert
     long insertDocument(A3Document document);
 

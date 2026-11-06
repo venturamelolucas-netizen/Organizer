@@ -42,6 +42,13 @@ public class PomodoroActivity extends AppCompatActivity {
     private TextView tvTotalWork;
     private TextView tvTotalBreak;
 
+    private static final String KEY_STATE_IS_RUNNING = "pomo_is_running";
+    private static final String KEY_STATE_TARGET_END = "pomo_target_end";
+    private static final String KEY_STATE_MILLIS_LEFT = "pomo_millis_left";
+    private static final String KEY_STATE_TOTAL_MILLIS = "pomo_total_millis";
+    private static final String KEY_STATE_IS_WORK = "pomo_is_work";
+    private static final String KEY_STATE_CYCLE = "pomo_cycle";
+
     private CountDownTimer timer;
     private boolean isRunning = false;
     private boolean isWorkMode = true;
@@ -82,8 +89,6 @@ public class PomodoroActivity extends AppCompatActivity {
         totalMillis = configWorkMin * 60 * 1000L;
         millisLeft = totalMillis;
 
-        updateTimerDisplay();
-
         fabToggle.setOnClickListener(v -> {
             if (isRunning) {
                 pauseTimer();
@@ -93,11 +98,85 @@ public class PomodoroActivity extends AppCompatActivity {
         });
 
         btnReset.setOnClickListener(v -> resetTimer());
-        btnSkip.setOnClickListener(v -> switchMode());
+        btnSkip.setOnClickListener(v -> {
+            pauseTimer();
+            switchMode();
+        });
 
         findViewById(R.id.btn_pomodoro_config).setOnClickListener(v -> showConfigDialog());
 
         observeHistoricalStats();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        recoverSessionState();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        persistSessionState();
+    }
+
+    private void persistSessionState() {
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+        editor.putBoolean(KEY_STATE_IS_RUNNING, isRunning);
+        if (isRunning) {
+            editor.putLong(KEY_STATE_TARGET_END, System.currentTimeMillis() + millisLeft);
+        } else {
+            editor.putLong(KEY_STATE_TARGET_END, 0);
+        }
+        editor.putLong(KEY_STATE_MILLIS_LEFT, millisLeft);
+        editor.putLong(KEY_STATE_TOTAL_MILLIS, totalMillis);
+        editor.putBoolean(KEY_STATE_IS_WORK, isWorkMode);
+        editor.putInt(KEY_STATE_CYCLE, currentCycle);
+        editor.apply();
+    }
+
+    private void recoverSessionState() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean wasRunning = prefs.getBoolean(KEY_STATE_IS_RUNNING, false);
+        long targetEnd = prefs.getLong(KEY_STATE_TARGET_END, 0);
+        isWorkMode = prefs.getBoolean(KEY_STATE_IS_WORK, true);
+        currentCycle = prefs.getInt(KEY_STATE_CYCLE, 1);
+        long savedTotal = prefs.getLong(KEY_STATE_TOTAL_MILLIS, 0);
+        if (savedTotal > 0) totalMillis = savedTotal;
+
+        updateModeUI();
+
+        if (wasRunning && targetEnd > 0) {
+            long now = System.currentTimeMillis();
+            if (now >= targetEnd) {
+                millisLeft = 0;
+                updateTimerDisplay();
+                onTimerFinished();
+            } else {
+                millisLeft = targetEnd - now;
+                startTimer();
+            }
+        } else {
+            long savedLeft = prefs.getLong(KEY_STATE_MILLIS_LEFT, 0);
+            if (savedLeft > 0) {
+                millisLeft = savedLeft;
+            } else {
+                millisLeft = totalMillis;
+            }
+            updateTimerDisplay();
+        }
+    }
+
+    private void updateModeUI() {
+        if (isWorkMode) {
+            tvMode.setText("FOCO PROFUNDO");
+            tvMode.setTextColor(getColor(R.color.module_pomodoro));
+        } else {
+            boolean isLongBreak = (currentCycle % configCycles == 0);
+            int breakDuration = isLongBreak ? configLongBreakMin : configBreakMin;
+            tvMode.setText(isLongBreak ? "PAUSA LONGA (" + breakDuration + " min)" : "PAUSA CURTA (" + breakDuration + " min)");
+            tvMode.setTextColor(getColor(R.color.module_kaizen));
+        }
     }
 
     private void loadUserConfig() {
@@ -178,6 +257,17 @@ public class PomodoroActivity extends AppCompatActivity {
 
         cardStats.setVisibility(isWorkMode ? View.GONE : View.VISIBLE);
 
+        // Schedule background alarm so user is notified even if app is backgrounded
+        long targetEndTime = System.currentTimeMillis() + millisLeft;
+        int notifId = isWorkMode ? NotificationHelper.OFFSET_POMODORO_WORK : NotificationHelper.OFFSET_POMODORO_BREAK;
+        String notifTitle = isWorkMode ? "Pomodoro: Hora de Descansar!" : "Pomodoro: Fim do Descanso!";
+        String notifMsg = isWorkMode
+                ? "Você concluiu uma sessão de foco (" + configWorkMin + " min). Faça uma pausa revigorante."
+                : "Pronto para iniciar um novo bloco de foco?";
+        NotificationHelper.scheduleNotification(this, notifId, notifTitle, notifMsg, NotificationHelper.CHANNEL_POMODORO, targetEndTime);
+
+        persistSessionState();
+
         timer = new CountDownTimer(millisLeft, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
@@ -198,12 +288,16 @@ public class PomodoroActivity extends AppCompatActivity {
         if (timer != null) {
             timer.cancel();
         }
+        NotificationHelper.cancelNotification(this, NotificationHelper.OFFSET_POMODORO_WORK);
+        NotificationHelper.cancelNotification(this, NotificationHelper.OFFSET_POMODORO_BREAK);
+        persistSessionState();
         cardStats.setVisibility(View.VISIBLE);
     }
 
     private void resetTimer() {
         pauseTimer();
         millisLeft = totalMillis;
+        persistSessionState();
         updateTimerDisplay();
         NotificationHelper.vibrateFeedback(this, 30);
     }
@@ -213,37 +307,20 @@ public class PomodoroActivity extends AppCompatActivity {
         fabToggle.setImageResource(R.drawable.ic_play);
         cardStats.setVisibility(View.VISIBLE);
 
+        NotificationHelper.cancelNotification(this, NotificationHelper.OFFSET_POMODORO_WORK);
+        NotificationHelper.cancelNotification(this, NotificationHelper.OFFSET_POMODORO_BREAK);
+
         NotificationHelper.vibrateFeedback(this, 500);
 
         if (isWorkMode) {
             final int completedWorkMin = configWorkMin;
             saveSessionRecord(completedWorkMin, 0, 1);
-
-            NotificationHelper.scheduleNotification(
-                    this,
-                    999,
-                    "Pomodoro: Hora de Descansar!",
-                    "Você concluiu uma sessão de foco (" + completedWorkMin + " min). Faça uma pausa revigorante.",
-                    NotificationHelper.CHANNEL_POMODORO,
-                    System.currentTimeMillis() + 100
-            );
-
             Toast.makeText(this, "Foco concluído (" + completedWorkMin + " min)! Hora de descansar.", Toast.LENGTH_LONG).show();
             switchMode();
         } else {
             boolean wasLongBreak = (currentCycle % configCycles == 0);
             final int completedBreakMin = wasLongBreak ? configLongBreakMin : configBreakMin;
             saveSessionRecord(0, completedBreakMin, 0);
-
-            NotificationHelper.scheduleNotification(
-                    this,
-                    998,
-                    "Pomodoro: Fim do Descanso!",
-                    "Pronto para iniciar um novo bloco de foco?",
-                    NotificationHelper.CHANNEL_POMODORO,
-                    System.currentTimeMillis() + 100
-            );
-
             Toast.makeText(this, "Pausa finalizada! Pronto para o próximo foco?", Toast.LENGTH_LONG).show();
             switchMode();
         }

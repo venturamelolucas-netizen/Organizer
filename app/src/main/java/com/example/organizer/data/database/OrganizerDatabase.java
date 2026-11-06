@@ -44,7 +44,7 @@ import com.example.organizer.data.entity.Tag;
         Note.class,
         Tag.class
     },
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 public abstract class OrganizerDatabase extends RoomDatabase {
@@ -56,6 +56,14 @@ public abstract class OrganizerDatabase extends RoomDatabase {
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE fives_items ADD COLUMN lastExecutionDate INTEGER NOT NULL DEFAULT 0");
             database.execSQL("ALTER TABLE fives_items ADD COLUMN nextExecutionDate INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
+    public static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE kaizen_progress ADD COLUMN orderIndex INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_tags_name ON tags (name)");
         }
     };
 
@@ -76,7 +84,7 @@ public abstract class OrganizerDatabase extends RoomDatabase {
                             OrganizerDatabase.class,
                             "organizer_master_db"
                     )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build();
                 }
             }

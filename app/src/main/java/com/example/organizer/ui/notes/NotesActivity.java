@@ -377,16 +377,19 @@ public class NotesActivity extends AppCompatActivity implements NotesAdapter.OnN
         tagAdapter.setTags(allTagsCache);
         tvNoTags.setVisibility(allTagsCache.isEmpty() ? View.VISIBLE : View.GONE);
 
-        // Live observation
-        DatabaseClient.getInstance(this).getDatabase().noteDao().getAllTags().observe(this, tags -> {
+        // Live observation with clean observer lifecycle
+        androidx.lifecycle.LiveData<List<Tag>> tagsLiveData = DatabaseClient.getInstance(this).getDatabase().noteDao().getAllTags();
+        androidx.lifecycle.Observer<List<Tag>> tagObserver = tags -> {
             List<Tag> list = (tags != null) ? tags : new ArrayList<>();
             tagAdapter.setTags(list);
             tvNoTags.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
-        });
+        };
+        tagsLiveData.observe(this, tagObserver);
 
         btnCreateNewTag.setOnClickListener(v -> showEditTagDialog(null));
         btnClose.setOnClickListener(v -> dialog.dismiss());
 
+        dialog.setOnDismissListener(d -> tagsLiveData.removeObserver(tagObserver));
         dialog.show();
     }
 
@@ -440,7 +443,12 @@ public class NotesActivity extends AppCompatActivity implements NotesAdapter.OnN
             final String color = selectedColor[0];
 
             DatabaseClient.getInstance(this).getExecutor().execute(() -> {
+                Tag collision = DatabaseClient.getInstance(NotesActivity.this).getDatabase().noteDao().getTagByName(newName);
                 if (existingTag != null) {
+                    if (collision != null && collision.getId() != existingTag.getId()) {
+                        runOnUiThread(() -> Toast.makeText(NotesActivity.this, "Já existe uma etiqueta com esse nome!", Toast.LENGTH_SHORT).show());
+                        return;
+                    }
                     String oldName = existingTag.getName();
                     existingTag.setName(newName);
                     existingTag.setColor(color);
@@ -448,14 +456,21 @@ public class NotesActivity extends AppCompatActivity implements NotesAdapter.OnN
                     // Update notes referencing old name
                     DatabaseClient.getInstance(this).getDatabase().noteDao().updateTagNameInNotes(oldName, newName);
                 } else {
+                    if (collision != null) {
+                        runOnUiThread(() -> Toast.makeText(NotesActivity.this, "Essa etiqueta já existe!", Toast.LENGTH_SHORT).show());
+                        return;
+                    }
                     Tag newTag = new Tag(newName, color);
                     DatabaseClient.getInstance(this).getDatabase().noteDao().insertTag(newTag);
                 }
-            });
 
-            dialog.dismiss();
-            Toast.makeText(this, "Etiqueta salva!", Toast.LENGTH_SHORT).show();
-            NotificationHelper.vibrateFeedback(this, 30);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    dialog.dismiss();
+                    Toast.makeText(NotesActivity.this, "Etiqueta salva!", Toast.LENGTH_SHORT).show();
+                    NotificationHelper.vibrateFeedback(NotesActivity.this, 30);
+                });
+            });
         });
 
         dialog.show();

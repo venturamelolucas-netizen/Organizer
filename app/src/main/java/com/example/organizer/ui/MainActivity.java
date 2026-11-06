@@ -2,6 +2,7 @@ package com.example.organizer.ui;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -29,8 +30,32 @@ public class MainActivity extends AppCompatActivity {
         // Initialize Notification Channels
         NotificationHelper.createNotificationChannels(this);
 
+        // Request POST_NOTIFICATIONS on Android 13+ if not already granted
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(), isGranted -> {
+                    if (isGranted) {
+                        NotificationHelper.rescheduleAllAlarms(this);
+                    }
+                }).launch(android.Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
+
         // Preload DB instance eagerly
         DatabaseClient.getInstance(this);
+
+        // Handle Edge-to-Edge System Bars Window Insets
+        View root = findViewById(R.id.fragment_container);
+        if (root != null) {
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+                androidx.core.graphics.Insets systemBars = insets.getInsets(
+                        androidx.core.view.WindowInsetsCompat.Type.systemBars()
+                );
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+                return insets;
+            });
+        }
 
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()

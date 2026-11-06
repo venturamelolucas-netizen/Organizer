@@ -28,6 +28,9 @@ public interface EisenhowerDao {
     @Query("SELECT * FROM eisenhower_tasks WHERE id = :id LIMIT 1")
     EisenhowerTask getTaskById(long id);
 
+    @Query("SELECT COUNT(*) FROM eisenhower_tasks")
+    int getTaskCount();
+
     @Query("SELECT COUNT(*) FROM eisenhower_tasks WHERE quadrant = :quadrant AND isCompleted = 0")
     LiveData<Integer> getPendingCountByQuadrant(int quadrant);
 

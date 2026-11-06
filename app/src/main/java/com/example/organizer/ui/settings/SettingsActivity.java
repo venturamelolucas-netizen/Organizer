@@ -73,7 +73,13 @@ public class SettingsActivity extends AppCompatActivity {
 
         switchNotifications.setOnCheckedChangeListener((btn, isChecked) -> {
             prefs.edit().putBoolean(KEY_NOTIFICATIONS, isChecked).apply();
-            Toast.makeText(this, isChecked ? "Notificações ativadas" : "Notificações pausadas", Toast.LENGTH_SHORT).show();
+            if (isChecked) {
+                NotificationHelper.rescheduleAllAlarms(this);
+                Toast.makeText(this, "Notificações ativadas e alarmes reagendados", Toast.LENGTH_SHORT).show();
+            } else {
+                NotificationHelper.cancelAllAlarms(this);
+                Toast.makeText(this, "Notificações pausadas e alarmes cancelados", Toast.LENGTH_SHORT).show();
+            }
         });
 
         switchVibration.setOnCheckedChangeListener((btn, isChecked) -> {
@@ -140,14 +146,18 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void reloadSampleData() {
         new AlertDialog.Builder(this)
-                .setTitle("Recarregar Dados de Exemplo")
-                .setMessage("Deseja restaurar os dados de demonstração para todos os 8 módulos?")
-                .setPositiveButton("Recarregar", (d, w) -> {
-                    Toast.makeText(this, "Carregando dados de exemplo...", Toast.LENGTH_SHORT).show();
+                .setTitle("Carregar Dados de Exemplo")
+                .setMessage("Deseja inserir dados de demonstração nos módulos vazios? Seus dados reais existentes serão preservados.")
+                .setPositiveButton("Carregar", (d, w) -> {
+                    Toast.makeText(this, "Carregando exemplos...", Toast.LENGTH_SHORT).show();
                     DatabaseClient.getInstance(this).getExecutor().execute(() -> {
-                        SampleDataGenerator.preloadSampleData(DatabaseClient.getInstance(this).getDatabase());
+                        boolean inserted = SampleDataGenerator.preloadSampleData(DatabaseClient.getInstance(this).getDatabase());
                         runOnUiThread(() -> {
-                            Toast.makeText(this, R.string.sample_data_loaded, Toast.LENGTH_SHORT).show();
+                            if (inserted) {
+                                Toast.makeText(this, R.string.sample_data_loaded, Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(this, "Dados reais preservados. Nenhum módulo estava vazio.", Toast.LENGTH_SHORT).show();
+                            }
                             NotificationHelper.vibrateFeedback(this, 40);
                         });
                     });

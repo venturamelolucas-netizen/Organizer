@@ -47,6 +47,7 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
         this.context = context;
         this.lifecycleOwner = lifecycleOwner;
         this.listener = listener;
+        setHasStableIds(true);
     }
 
     public void setLists(List<KanbanList> newLists) {
@@ -193,15 +194,21 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
         holder.cardRoot.setOnDragListener(columnDragListener);
         holder.rvCards.setOnDragListener(columnDragListener);
 
+        // Clean up any existing observer on this recycled holder
+        if (holder.currentLiveData != null && holder.currentObserver != null) {
+            holder.currentLiveData.removeObserver(holder.currentObserver);
+        }
+
         // Observe cards for this list
-        DatabaseClient.getInstance(context)
+        holder.currentLiveData = DatabaseClient.getInstance(context)
                 .getDatabase()
                 .kanbanDao()
-                .getCardsByList(list.getId())
-                .observe(lifecycleOwner, cards -> {
-                    cardAdapter.setCards(cards);
-                    holder.tvCount.setText(String.valueOf(cards != null ? cards.size() : 0));
-                });
+                .getCardsByList(list.getId());
+        holder.currentObserver = cards -> {
+            cardAdapter.setCards(cards);
+            holder.tvCount.setText(String.valueOf(cards != null ? cards.size() : 0));
+        };
+        holder.currentLiveData.observe(lifecycleOwner, holder.currentObserver);
 
         holder.btnAddCard.setOnClickListener(v -> {
             if (listener != null) listener.onAddCard(list);
@@ -219,8 +226,26 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
     }
 
     @Override
+    public void onViewRecycled(@NonNull ColumnViewHolder holder) {
+        super.onViewRecycled(holder);
+        if (holder.currentLiveData != null && holder.currentObserver != null) {
+            holder.currentLiveData.removeObserver(holder.currentObserver);
+            holder.currentLiveData = null;
+            holder.currentObserver = null;
+        }
+    }
+
+    @Override
     public int getItemCount() {
         return lists.size();
+    }
+
+    @Override
+    public long getItemId(int position) {
+        if (position >= 0 && position < lists.size()) {
+            return lists.get(position).getId();
+        }
+        return RecyclerView.NO_ID;
     }
 
     static class ColumnViewHolder extends RecyclerView.ViewHolder {
@@ -231,6 +256,9 @@ public class KanbanColumnAdapter extends RecyclerView.Adapter<KanbanColumnAdapte
         ImageButton btnDeleteList;
         RecyclerView rvCards;
         View btnAddCard;
+
+        androidx.lifecycle.LiveData<List<KanbanCard>> currentLiveData;
+        androidx.lifecycle.Observer<List<KanbanCard>> currentObserver;
 
         public ColumnViewHolder(@NonNull View itemView) {
             super(itemView);

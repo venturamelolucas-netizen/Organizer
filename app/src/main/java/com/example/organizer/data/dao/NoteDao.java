@@ -27,6 +27,9 @@ public interface NoteDao {
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
     Note getNoteById(long id);
 
+    @Query("SELECT COUNT(*) FROM notes")
+    int getNoteCount();
+
     @Insert
     long insertNote(Note note);
 

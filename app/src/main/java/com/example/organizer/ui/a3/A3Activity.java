@@ -153,22 +153,23 @@ public class A3Activity extends AppCompatActivity {
     }
 
     private void saveCurrentDocument() {
-        String title = etTitle.getText().toString().trim();
+        final String title = etTitle.getText().toString().trim();
         if (title.isEmpty()) {
             etTitle.setError("Informe o título do relatório A3");
             return;
         }
 
-        String problem = etProblem.getText().toString().trim();
-        String context = etContext.getText().toString().trim();
-        String currentCond = etCurrentConditions.getText().toString().trim();
-        String rootCause = etRootCause.getText().toString().trim();
-        String improvements = etImprovementProposals.getText().toString().trim();
-        String plan = etActionPlan.getText().toString().trim();
-        String results = etFollowupResults.getText().toString().trim();
+        final String problem = etProblem.getText().toString().trim();
+        final String context = etContext.getText().toString().trim();
+        final String currentCond = etCurrentConditions.getText().toString().trim();
+        final String rootCause = etRootCause.getText().toString().trim();
+        final String improvements = etImprovementProposals.getText().toString().trim();
+        final String plan = etActionPlan.getText().toString().trim();
+        final String results = etFollowupResults.getText().toString().trim();
+        final long targetDocId = selectedDocId;
 
         DatabaseClient.getInstance(this).getExecutor().execute(() -> {
-            A3Document existing = (selectedDocId > 0) ? getDocById(selectedDocId) : null;
+            A3Document existing = (targetDocId > 0) ? getDocById(targetDocId) : null;
             if (existing != null) {
                 existing.setTitle(title);
                 existing.setProblem(problem);
@@ -188,10 +189,13 @@ public class A3Activity extends AppCompatActivity {
                 long newId = DatabaseClient.getInstance(this).getDatabase().a3Dao().insertDocument(newDoc);
                 selectedDocId = newId;
             }
-        });
 
-        Toast.makeText(this, "Relatório A3 salvo com sucesso!", Toast.LENGTH_SHORT).show();
-        NotificationHelper.vibrateFeedback(this, 30);
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                Toast.makeText(A3Activity.this, "Relatório A3 salvo com sucesso!", Toast.LENGTH_SHORT).show();
+                NotificationHelper.vibrateFeedback(A3Activity.this, 30);
+            });
+        });
     }
 
     private void deleteCurrentDocument() {
@@ -201,18 +205,21 @@ public class A3Activity extends AppCompatActivity {
             return;
         }
 
+        final A3Document docToDelete = toDelete;
         new AlertDialog.Builder(this)
                 .setTitle("Excluir Relatório A3")
-                .setMessage("Deseja realmente excluir \"" + toDelete.getTitle() + "\"?\nEsta ação é permanente.")
+                .setMessage("Deseja realmente excluir \"" + docToDelete.getTitle() + "\"?\nEsta ação é permanente.")
                 .setPositiveButton("Excluir Definitivamente", (d, w) -> {
-                    long id = toDelete.getId();
                     DatabaseClient.getInstance(this).getExecutor().execute(() -> {
-                        DatabaseClient.getInstance(this).getDatabase().a3Dao().deleteDocument(toDelete);
+                        DatabaseClient.getInstance(this).getDatabase().a3Dao().deleteDocument(docToDelete);
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            selectedDocId = -1;
+                            clearFieldsForNewDoc();
+                            Toast.makeText(A3Activity.this, "Relatório A3 excluído.", Toast.LENGTH_SHORT).show();
+                            NotificationHelper.vibrateFeedback(A3Activity.this, 40);
+                        });
                     });
-                    selectedDocId = -1;
-                    clearFieldsForNewDoc();
-                    Toast.makeText(this, "Relatório A3 excluído.", Toast.LENGTH_SHORT).show();
-                    NotificationHelper.vibrateFeedback(this, 40);
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();

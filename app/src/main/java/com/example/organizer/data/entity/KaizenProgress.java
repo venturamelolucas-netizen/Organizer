@@ -23,6 +23,7 @@ public class KaizenProgress {
     private long date;
     private boolean achieved;
     private String notes;
+    private int orderIndex;
 
     public KaizenProgress(long goalId, String stepTitle, long date, boolean achieved, String notes) {
         this.goalId = goalId;
@@ -30,6 +31,7 @@ public class KaizenProgress {
         this.date = date;
         this.achieved = achieved;
         this.notes = notes;
+        this.orderIndex = 0;
     }
 
     public long getId() { return id; }
@@ -49,4 +51,7 @@ public class KaizenProgress {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public int getOrderIndex() { return orderIndex; }
+    public void setOrderIndex(int orderIndex) { this.orderIndex = orderIndex; }
 }

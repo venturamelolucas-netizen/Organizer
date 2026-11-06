@@ -56,12 +56,22 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
         holder.tvContent.setText(note.getContent());
 
         // Parse custom post-it color
+        int bgColor;
         try {
-            int color = Color.parseColor(note.getColor());
-            holder.cardRoot.setCardBackgroundColor(color);
+            bgColor = Color.parseColor(note.getColor());
         } catch (Exception e) {
-            holder.cardRoot.setCardBackgroundColor(Color.parseColor("#FEF08A"));
+            bgColor = Color.parseColor("#FEF08A");
         }
+        holder.cardRoot.setCardBackgroundColor(bgColor);
+
+        // Dynamic text contrast based on background luminance
+        double luminance = androidx.core.graphics.ColorUtils.calculateLuminance(bgColor);
+        int titleColor = luminance > 0.45 ? Color.parseColor("#1F2937") : Color.parseColor("#F9FAFB");
+        int subColor = luminance > 0.45 ? Color.parseColor("#4B5563") : Color.parseColor("#E5E7EB");
+
+        holder.tvTitle.setTextColor(titleColor);
+        holder.tvContent.setTextColor(subColor);
+        holder.tvDate.setTextColor(subColor);
 
         // Tag
         if (note.getTag() != null && !note.getTag().isEmpty()) {

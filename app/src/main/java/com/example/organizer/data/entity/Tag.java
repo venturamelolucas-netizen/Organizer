@@ -1,9 +1,13 @@
 package com.example.organizer.data.entity;
 
 import androidx.room.Entity;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
-@Entity(tableName = "tags")
+@Entity(
+    tableName = "tags",
+    indices = {@Index(value = {"name"}, unique = true)}
+)
 public class Tag {
     @PrimaryKey(autoGenerate = true)
     private long id;

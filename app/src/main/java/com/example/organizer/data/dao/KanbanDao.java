@@ -22,6 +22,9 @@ public interface KanbanDao {
     @Query("SELECT * FROM kanban_boards WHERE id = :boardId LIMIT 1")
     KanbanBoard getBoardById(long boardId);
 
+    @Query("SELECT COUNT(*) FROM kanban_boards")
+    int getBoardCount();
+
     @Insert
     long insertBoard(KanbanBoard board);
 

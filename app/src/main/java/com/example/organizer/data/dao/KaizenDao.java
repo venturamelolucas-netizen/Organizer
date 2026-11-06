@@ -20,6 +20,12 @@ public interface KaizenDao {
     @Query("SELECT * FROM kaizen_goals WHERE id = :goalId LIMIT 1")
     KaizenGoal getGoalById(long goalId);
 
+    @Query("SELECT * FROM kaizen_goals WHERE notificationEnabled = 1")
+    List<KaizenGoal> getAllEnabledGoalsSync();
+
+    @Query("SELECT COUNT(*) FROM kaizen_goals")
+    int getGoalCount();
+
     @Insert
     long insertGoal(KaizenGoal goal);
 
@@ -30,10 +36,10 @@ public interface KaizenDao {
     void deleteGoal(KaizenGoal goal);
 
     // Progress
-    @Query("SELECT * FROM kaizen_progress WHERE goalId = :goalId ORDER BY date DESC")
+    @Query("SELECT * FROM kaizen_progress WHERE goalId = :goalId ORDER BY orderIndex ASC, id ASC")
     LiveData<List<KaizenProgress>> getProgressByGoal(long goalId);
 
-    @Query("SELECT * FROM kaizen_progress WHERE goalId = :goalId ORDER BY date DESC")
+    @Query("SELECT * FROM kaizen_progress WHERE goalId = :goalId ORDER BY orderIndex ASC, id ASC")
     List<KaizenProgress> getProgressByGoalSync(long goalId);
 
     @Insert

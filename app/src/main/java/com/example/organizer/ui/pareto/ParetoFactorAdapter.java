@@ -45,7 +45,8 @@ public class ParetoFactorAdapter extends RecyclerView.Adapter<ParetoFactorAdapte
         GeminiService.ParetoFactor factor = factors.get(position);
 
         holder.tvTitle.setText(factor.title);
-        holder.pbImpact.setProgress(factor.impactPercentage);
+        int pct = factor.impactPercentage;
+        holder.pbImpact.setProgress(pct > 0 ? pct : (factor.isTopTwenty ? 50 : 20));
 
         if (factor.isTopTwenty) {
             // Highlighted in 20% vital
@@ -53,7 +54,8 @@ public class ParetoFactorAdapter extends RecyclerView.Adapter<ParetoFactorAdapte
             holder.cardRoot.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.module_pareto)));
             holder.cardRoot.setStrokeWidth(2);
 
-            holder.tvBadge.setText("20% Vital • " + factor.impactPercentage + "%");
+            String badgeText = (pct > 0) ? ("20% Vital • " + pct + "%") : "20% Vital • Alta Relevância";
+            holder.tvBadge.setText(badgeText);
             holder.tvBadge.setTextColor(ContextCompat.getColor(context, R.color.white));
             holder.tvBadge.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.module_pareto)));
 
@@ -64,7 +66,8 @@ public class ParetoFactorAdapter extends RecyclerView.Adapter<ParetoFactorAdapte
             holder.cardRoot.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.card_stroke_light)));
             holder.cardRoot.setStrokeWidth(1);
 
-            holder.tvBadge.setText("Secundário • " + factor.impactPercentage + "%");
+            String badgeText = (pct > 0) ? ("Secundário • " + pct + "%") : "Secundário • Menor Impacto";
+            holder.tvBadge.setText(badgeText);
             holder.tvBadge.setTextColor(ContextCompat.getColor(context, R.color.text_secondary));
             holder.tvBadge.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.gray_200)));
 

@@ -140,11 +140,13 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
             cal.add(Calendar.DAY_OF_YEAR, 1);
         }
 
-        NotificationHelper.scheduleNotification(
+        NotificationHelper.scheduleRoutineNotification(
                 this,
-                (int) goalId + 5000,
+                -1L,
+                goalId,
+                NotificationHelper.OFFSET_KAIZEN + (int) goalId,
                 "Kaizen: " + title,
-                "Hora de dar um passo na sua evolução gradual diária.",
+                "Hora do seu micro-hábito diário de 1%!",
                 NotificationHelper.CHANNEL_KAIZEN,
                 cal.getTimeInMillis()
         );
@@ -303,14 +305,32 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
             String notifDays = customNotifDays[0];
 
             DatabaseClient.getInstance(this).getExecutor().execute(() -> {
+                List<KaizenProgress> existing = DatabaseClient.getInstance(this)
+                        .getDatabase().kaizenDao().getProgressByGoalSync(goal.getId());
+                int nextOrder = (existing != null) ? existing.size() : 0;
+
                 for (String stepText : finalSteps) {
-                    DatabaseClient.getInstance(this).getDatabase().kaizenDao().insertProgress(
-                            new KaizenProgress(goal.getId(), stepText, System.currentTimeMillis(), false, "")
-                    );
+                    boolean isDuplicate = false;
+                    if (existing != null) {
+                        for (KaizenProgress p : existing) {
+                            if (p.getStepTitle().equalsIgnoreCase(stepText)) {
+                                isDuplicate = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isDuplicate) {
+                        KaizenProgress newStep = new KaizenProgress(
+                                goal.getId(), stepText, System.currentTimeMillis(), false, ""
+                        );
+                        newStep.setOrderIndex(nextOrder++);
+                        DatabaseClient.getInstance(this).getDatabase().kaizenDao().insertProgress(newStep);
+                    }
                 }
 
                 if (applyNotif) {
-                    goal.setNotificationsEnabled(true);
+                    goal.setNotificationEnabled(true);
                     goal.setNotificationTime(notifTime);
                     goal.setNotificationDays(notifDays);
                     DatabaseClient.getInstance(this).getDatabase().kaizenDao().updateGoal(goal);
@@ -322,11 +342,14 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
                         scheduleKaizenNotification(goal.getId(), goal.getTitle(), h, m);
                     } catch (Exception ignored) {}
                 }
-            });
 
-            bottomSheet.dismiss();
-            Toast.makeText(this, "Etapas aceitas e incorporadas à meta!", Toast.LENGTH_SHORT).show();
-            NotificationHelper.vibrateFeedback(this, 40);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    bottomSheet.dismiss();
+                    Toast.makeText(KaizenActivity.this, "Etapas aceitas e incorporadas à meta!", Toast.LENGTH_SHORT).show();
+                    NotificationHelper.vibrateFeedback(KaizenActivity.this, 40);
+                });
+            });
         });
 
         bottomSheet.setContentView(sheetView);
@@ -352,53 +375,93 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
                 .setView(dialogView)
                 .create();
 
+        final KaizenStepAdapter[] stepAdapterHolder = new KaizenStepAdapter[1];
         KaizenStepAdapter stepAdapter = new KaizenStepAdapter(this, new KaizenStepAdapter.StepActionListener() {
             @Override
             public void onToggleAchieved(KaizenProgress step, boolean achieved) {
-                step.setAchieved(achieved);
-                DatabaseClient.getInstance(KaizenActivity.this).getExecutor().execute(() -> {
-                    DatabaseClient.getInstance(KaizenActivity.this).getDatabase().kaizenDao().updateProgress(step);
-
-                    // Recalculate goal progression based on completed steps
-                    List<KaizenProgress> all = DatabaseClient.getInstance(KaizenActivity.this)
-                            .getDatabase().kaizenDao().getProgressByGoalSync(goal.getId());
-                    if (all != null && !all.isEmpty()) {
-                        int achievedCount = 0;
-                        for (KaizenProgress p : all) {
-                            if (p.isAchieved()) achievedCount++;
-                        }
-                        int newProg = (achievedCount * 100) / all.size();
-                        goal.setProgress(newProg);
-                        DatabaseClient.getInstance(KaizenActivity.this).getDatabase().kaizenDao().updateGoal(goal);
-
-                        runOnUiThread(() -> pbProgress.setProgress(newProg));
+                List<KaizenProgress> currentList = stepAdapterHolder[0].getSteps();
+                int stepIndex = -1;
+                for (int i = 0; i < currentList.size(); i++) {
+                    if (currentList.get(i).getId() == step.getId()) {
+                        stepIndex = i;
+                        break;
                     }
-                });
-                NotificationHelper.vibrateFeedback(KaizenActivity.this, 35);
+                }
+
+                if (achieved) {
+                    // Business rule: step N can only be completed if steps 0..N-1 are completed
+                    if (stepIndex > 0) {
+                        for (int i = 0; i < stepIndex; i++) {
+                            if (!currentList.get(i).isAchieved()) {
+                                Toast.makeText(KaizenActivity.this, "Conclua as etapas anteriores primeiro!", Toast.LENGTH_SHORT).show();
+                                stepAdapterHolder[0].notifyItemChanged(stepIndex);
+                                return;
+                            }
+                        }
+                    }
+
+                    step.setAchieved(true);
+                    DatabaseClient.getInstance(KaizenActivity.this).getExecutor().execute(() -> {
+                        DatabaseClient.getInstance(KaizenActivity.this).getDatabase().kaizenDao().updateProgress(step);
+                        recalculateGoalProgression(goal, pbProgress);
+                    });
+                    NotificationHelper.vibrateFeedback(KaizenActivity.this, 35);
+                } else {
+                    // Unchecking: if subsequent steps are completed, warn user and cascade uncheck
+                    boolean hasSubsequentAchieved = false;
+                    if (stepIndex != -1) {
+                        for (int i = stepIndex + 1; i < currentList.size(); i++) {
+                            if (currentList.get(i).isAchieved()) {
+                                hasSubsequentAchieved = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    final int targetIdx = stepIndex;
+                    if (hasSubsequentAchieved) {
+                        new AlertDialog.Builder(KaizenActivity.this)
+                                .setTitle("Desmarcar Etapa")
+                                .setMessage("Desmarcar esta etapa irá desmarcar todas as etapas posteriores concluídas. Deseja continuar?")
+                                .setPositiveButton("Continuar", (d, w) -> {
+                                    DatabaseClient.getInstance(KaizenActivity.this).getExecutor().execute(() -> {
+                                        step.setAchieved(false);
+                                        DatabaseClient.getInstance(KaizenActivity.this).getDatabase().kaizenDao().updateProgress(step);
+                                        for (int i = targetIdx + 1; i < currentList.size(); i++) {
+                                            KaizenProgress subsequent = currentList.get(i);
+                                            if (subsequent.isAchieved()) {
+                                                subsequent.setAchieved(false);
+                                                DatabaseClient.getInstance(KaizenActivity.this).getDatabase().kaizenDao().updateProgress(subsequent);
+                                            }
+                                        }
+                                        recalculateGoalProgression(goal, pbProgress);
+                                    });
+                                    NotificationHelper.vibrateFeedback(KaizenActivity.this, 35);
+                                })
+                                .setNegativeButton("Cancelar", (d, w) -> {
+                                    stepAdapterHolder[0].notifyDataSetChanged();
+                                })
+                                .show();
+                    } else {
+                        step.setAchieved(false);
+                        DatabaseClient.getInstance(KaizenActivity.this).getExecutor().execute(() -> {
+                            DatabaseClient.getInstance(KaizenActivity.this).getDatabase().kaizenDao().updateProgress(step);
+                            recalculateGoalProgression(goal, pbProgress);
+                        });
+                        NotificationHelper.vibrateFeedback(KaizenActivity.this, 35);
+                    }
+                }
             }
 
             @Override
             public void onDeleteStep(KaizenProgress step) {
                 DatabaseClient.getInstance(KaizenActivity.this).getExecutor().execute(() -> {
                     DatabaseClient.getInstance(KaizenActivity.this).getDatabase().kaizenDao().deleteProgress(step);
-
-                    List<KaizenProgress> all = DatabaseClient.getInstance(KaizenActivity.this)
-                            .getDatabase().kaizenDao().getProgressByGoalSync(goal.getId());
-                    int newProg = 0;
-                    if (all != null && !all.isEmpty()) {
-                        int achievedCount = 0;
-                        for (KaizenProgress p : all) {
-                            if (p.isAchieved()) achievedCount++;
-                        }
-                        newProg = (achievedCount * 100) / all.size();
-                    }
-                    goal.setProgress(newProg);
-                    DatabaseClient.getInstance(KaizenActivity.this).getDatabase().kaizenDao().updateGoal(goal);
-                    final int fProg = newProg;
-                    runOnUiThread(() -> pbProgress.setProgress(fProg));
+                    recalculateGoalProgression(goal, pbProgress);
                 });
             }
         });
+        stepAdapterHolder[0] = stepAdapter;
 
         rvSteps.setLayoutManager(new LinearLayoutManager(this));
         rvSteps.setAdapter(stepAdapter);
@@ -420,9 +483,13 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
             String stepTitle = etNewStep.getText().toString().trim();
             if (!stepTitle.isEmpty()) {
                 DatabaseClient.getInstance(this).getExecutor().execute(() -> {
-                    DatabaseClient.getInstance(this).getDatabase().kaizenDao().insertProgress(
-                            new KaizenProgress(goal.getId(), stepTitle, System.currentTimeMillis(), false, "")
+                    List<KaizenProgress> current = DatabaseClient.getInstance(this).getDatabase().kaizenDao().getProgressByGoalSync(goal.getId());
+                    int nextOrder = (current != null) ? current.size() : 0;
+                    KaizenProgress newStep = new KaizenProgress(
+                            goal.getId(), stepTitle, System.currentTimeMillis(), false, ""
                     );
+                    newStep.setOrderIndex(nextOrder);
+                    DatabaseClient.getInstance(this).getDatabase().kaizenDao().insertProgress(newStep);
                 });
                 etNewStep.setText("");
             }
@@ -433,6 +500,25 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
         dialog.show();
     }
 
+    private void recalculateGoalProgression(KaizenGoal goal, ProgressBar pbProgress) {
+        List<KaizenProgress> all = DatabaseClient.getInstance(this)
+                .getDatabase().kaizenDao().getProgressByGoalSync(goal.getId());
+        int newProg = 0;
+        if (all != null && !all.isEmpty()) {
+            int achievedCount = 0;
+            for (KaizenProgress p : all) {
+                if (p.isAchieved()) achievedCount++;
+            }
+            newProg = (achievedCount * 100) / all.size();
+        }
+        goal.setProgress(newProg);
+        DatabaseClient.getInstance(this).getDatabase().kaizenDao().updateGoal(goal);
+        final int fProg = newProg;
+        runOnUiThread(() -> {
+            if (pbProgress != null) pbProgress.setProgress(fProg);
+        });
+    }
+
     @Override
     public void onDeleteGoal(KaizenGoal goal) {
         new AlertDialog.Builder(this)
@@ -440,7 +526,7 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
                 .setMessage("Deseja realmente remover \"" + goal.getTitle() + "\"?\nTodo o progresso e etapas serão excluídos.")
                 .setPositiveButton("Excluir", (d, w) -> {
                     DatabaseClient.getInstance(this).getExecutor().execute(() -> {
-                        NotificationHelper.cancelNotification(this, (int) goal.getId() + 5000);
+                        NotificationHelper.cancelNotification(this, NotificationHelper.OFFSET_KAIZEN + (int) goal.getId());
                         DatabaseClient.getInstance(this).getDatabase().kaizenDao().deleteGoal(goal);
                     });
                     Toast.makeText(this, "Meta excluída!", Toast.LENGTH_SHORT).show();

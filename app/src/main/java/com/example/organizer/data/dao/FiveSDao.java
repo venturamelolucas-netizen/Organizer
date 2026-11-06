@@ -21,6 +21,9 @@ public interface FiveSDao {
     @Query("SELECT * FROM fives_projects LIMIT 1")
     FiveSProject getDefaultProject();
 
+    @Query("SELECT COUNT(*) FROM fives_projects")
+    int getProjectCount();
+
     @Insert
     long insertProject(FiveSProject project);
 
@@ -37,7 +40,7 @@ public interface FiveSDao {
     @Query("SELECT * FROM fives_items WHERE projectId = :projectId AND step = :step ORDER BY orderIndex ASC, id ASC")
     LiveData<List<FiveSItem>> getItemsByStep(long projectId, String step);
 
-    @Query("SELECT * FROM fives_items WHERE projectId = :projectId AND isEssential = 1 ORDER BY orderIndex ASC")
+    @Query("SELECT * FROM fives_items WHERE projectId = :projectId AND step = 'SEIRI' AND isEssential = 1 ORDER BY orderIndex ASC")
     LiveData<List<FiveSItem>> getEssentialItems(long projectId);
 
     @Query("SELECT * FROM fives_items WHERE projectId = :projectId AND step = 'SEISO'")
@@ -45,6 +48,9 @@ public interface FiveSDao {
 
     @Query("SELECT * FROM fives_items WHERE projectId = :projectId AND step = 'SEIKETSU_SHITSUKE'")
     LiveData<List<FiveSItem>> getRoutines(long projectId);
+
+    @Query("SELECT * FROM fives_items WHERE step = 'SEIKETSU_SHITSUKE' AND routineEnabled = 1")
+    List<FiveSItem> getAllEnabledRoutinesSync();
 
     @Query("SELECT * FROM fives_items WHERE id = :id LIMIT 1")
     FiveSItem getItemById(long id);

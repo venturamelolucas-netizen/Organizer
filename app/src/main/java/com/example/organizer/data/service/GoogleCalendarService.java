@@ -33,6 +33,7 @@ public class GoogleCalendarService {
         String[] projection = new String[]{
                 CalendarContract.Calendars._ID,
                 CalendarContract.Calendars.ACCOUNT_NAME,
+                CalendarContract.Calendars.ACCOUNT_TYPE,
                 CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
                 CalendarContract.Calendars.IS_PRIMARY
         };
@@ -48,14 +49,17 @@ public class GoogleCalendarService {
                 int idCol = cursor.getColumnIndex(CalendarContract.Calendars._ID);
                 int primaryCol = cursor.getColumnIndex(CalendarContract.Calendars.IS_PRIMARY);
                 int accountCol = cursor.getColumnIndex(CalendarContract.Calendars.ACCOUNT_NAME);
+                int typeCol = cursor.getColumnIndex(CalendarContract.Calendars.ACCOUNT_TYPE);
 
                 long fallbackId = cursor.getLong(idCol);
                 do {
                     long id = cursor.getLong(idCol);
                     String account = accountCol != -1 ? cursor.getString(accountCol) : "";
+                    String accType = typeCol != -1 ? cursor.getString(typeCol) : "";
                     int isPrimary = primaryCol != -1 ? cursor.getInt(primaryCol) : 0;
 
-                    if (isPrimary == 1 || (account != null && account.contains("@gmail.com"))) {
+                    // Strictly check Google Account type or @gmail.com/primary
+                    if ("com.google".equalsIgnoreCase(accType) || isPrimary == 1 || (account != null && account.contains("@gmail.com"))) {
                         return id;
                     }
                 } while (cursor.moveToNext());
@@ -86,6 +90,11 @@ public class GoogleCalendarService {
             return -1;
         }
 
+        // Require at least a valid date before syncing to Google Calendar
+        if (task.getDate() == null || task.getDate().trim().isEmpty()) {
+            return -1;
+        }
+
         long calendarId = getPrimaryCalendarId(context);
         if (calendarId == -1) {
             return -1;
@@ -108,8 +117,10 @@ public class GoogleCalendarService {
                 if (eventExists(context, task.getGoogleCalendarEventId())) {
                     // Update existing event without duplicating
                     Uri updateUri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, task.getGoogleCalendarEventId());
-                    cr.update(updateUri, values, null, null);
-                    return task.getGoogleCalendarEventId();
+                    int updatedRows = cr.update(updateUri, values, null, null);
+                    if (updatedRows > 0) {
+                        return task.getGoogleCalendarEventId();
+                    }
                 }
             }
 

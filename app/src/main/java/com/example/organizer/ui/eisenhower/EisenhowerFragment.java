@@ -3,6 +3,7 @@ package com.example.organizer.ui.eisenhower;
 import android.Manifest;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.Editable;
@@ -353,6 +354,24 @@ public class EisenhowerFragment extends Fragment implements EisenhowerTaskAdapte
             }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show();
         });
 
+        final Context appContext = requireContext().getApplicationContext();
+
+        switchCalendar.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                if (selectedDate[0] == null || selectedDate[0].trim().isEmpty()) {
+                    Toast.makeText(requireContext(), "Selecione a data da tarefa antes de ativar a sincronização.", Toast.LENGTH_SHORT).show();
+                    switchCalendar.setChecked(false);
+                    return;
+                }
+                if (!GoogleCalendarService.hasCalendarPermissions(requireContext())) {
+                    calendarPermissionLauncher.launch(new String[]{
+                            Manifest.permission.READ_CALENDAR,
+                            Manifest.permission.WRITE_CALENDAR
+                    });
+                }
+            }
+        });
+
         btnCancel.setOnClickListener(v -> dialog.dismiss());
 
         btnSave.setOnClickListener(v -> {
@@ -376,8 +395,11 @@ public class EisenhowerFragment extends Fragment implements EisenhowerTaskAdapte
             boolean shouldSyncCalendar = switchCalendar.isChecked();
             final int finalQuad = selectedQuad;
             final String finalPriority = priority;
+            final String fDate = selectedDate[0];
+            final String fTime = selectedTime[0];
+            final long fTimeMillis = calendar.getTimeInMillis();
 
-            DatabaseClient.getInstance(requireContext()).getExecutor().execute(() -> {
+            DatabaseClient.getInstance(appContext).getExecutor().execute(() -> {
                 EisenhowerTask taskToSave;
                 if (existingTask != null) {
                     taskToSave = existingTask;
@@ -385,16 +407,16 @@ public class EisenhowerFragment extends Fragment implements EisenhowerTaskAdapte
                     taskToSave.setDescription(desc);
                     taskToSave.setQuadrant(finalQuad);
                     taskToSave.setPriority(finalPriority);
-                    taskToSave.setDate(selectedDate[0]);
-                    taskToSave.setTime(selectedTime[0]);
-                    taskToSave.setTimestamp(calendar.getTimeInMillis());
+                    taskToSave.setDate(fDate);
+                    taskToSave.setTime(fTime);
+                    taskToSave.setTimestamp(fTimeMillis);
                 } else {
                     taskToSave = new EisenhowerTask(
                             title,
                             desc,
-                            selectedDate[0],
-                            selectedTime[0],
-                            calendar.getTimeInMillis(),
+                            fDate,
+                            fTime,
+                            fTimeMillis,
                             finalPriority,
                             finalQuad,
                             false,
@@ -404,29 +426,31 @@ public class EisenhowerFragment extends Fragment implements EisenhowerTaskAdapte
                     );
                 }
 
-                if (shouldSyncCalendar && GoogleCalendarService.hasCalendarPermissions(requireContext())) {
-                    long eventId = GoogleCalendarService.syncTaskToCalendar(requireContext(), taskToSave);
+                if (shouldSyncCalendar && GoogleCalendarService.hasCalendarPermissions(appContext)) {
+                    long eventId = GoogleCalendarService.syncTaskToCalendar(appContext, taskToSave);
                     if (eventId > 0) {
                         taskToSave.setGoogleCalendarEventId(eventId);
                         taskToSave.setSyncedWithCalendar(true);
                     }
                 } else if (!shouldSyncCalendar && taskToSave.getGoogleCalendarEventId() > 0) {
                     // Desativar sincronização: remover evento do Google Agenda e limpar vínculo local (Seção 13.4)
-                    GoogleCalendarService.deleteTaskFromCalendar(requireContext(), taskToSave.getGoogleCalendarEventId());
+                    GoogleCalendarService.deleteTaskFromCalendar(appContext, taskToSave.getGoogleCalendarEventId());
                     taskToSave.setGoogleCalendarEventId(0);
                     taskToSave.setSyncedWithCalendar(false);
                 }
 
                 if (existingTask != null) {
-                    DatabaseClient.getInstance(requireContext()).getDatabase().eisenhowerDao().updateTask(taskToSave);
+                    DatabaseClient.getInstance(appContext).getDatabase().eisenhowerDao().updateTask(taskToSave);
                 } else {
-                    DatabaseClient.getInstance(requireContext()).getDatabase().eisenhowerDao().insertTask(taskToSave);
+                    DatabaseClient.getInstance(appContext).getDatabase().eisenhowerDao().insertTask(taskToSave);
                 }
             });
 
             dialog.dismiss();
-            Toast.makeText(requireContext(), "Tarefa salva com sucesso!", Toast.LENGTH_SHORT).show();
-            NotificationHelper.vibrateFeedback(requireContext(), 30);
+            if (isAdded()) {
+                Toast.makeText(requireContext(), "Tarefa salva com sucesso!", Toast.LENGTH_SHORT).show();
+                NotificationHelper.vibrateFeedback(requireContext(), 30);
+            }
         });
 
         dialog.show();
