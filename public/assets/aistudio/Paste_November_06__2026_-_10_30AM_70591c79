@@ -1,0 +1,1224 @@
+# AUDITORIA CORRETIVA DO ORGANIZER — VERSÃO DE 06/11/2026
+
+Você está trabalhando sobre o projeto Android existente chamado **Organizer**.
+
+Sua tarefa é realizar uma nova rodada de correções técnicas, corrigindo os problemas identificados nesta especificação e preservando as funcionalidades que já estão funcionando.
+
+Esta não é uma solicitação para criar um novo aplicativo.
+
+**NÃO recrie o Organizer do zero.**
+
+**NÃO substitua a arquitetura sem necessidade.**
+
+**NÃO remova funcionalidades já implementadas corretamente.**
+
+Faça alterações direcionadas, mantendo a integridade dos dados e a estrutura existente.
+
+---
+
+# 1. ESTRUTURA DEFINITIVA
+
+O Organizer possui exatamente oito módulos principais:
+
+1. Kanban
+2. Kaizen
+3. Pomodoro
+4. Método A3
+5. Método 5S
+6. Lei de Pareto com IA
+7. Quadro de Eisenhower
+8. Bloco de Notas
+
+A Lista de Tarefas e a integração com Google Agenda pertencem ao Quadro de Eisenhower.
+
+Não criar módulos independentes para essas funcionalidades.
+
+## Tecnologias obrigatórias
+
+Manter:
+
+- Java;
+- XML;
+- Android Views;
+- Room Database;
+- arquitetura existente, desde que funcional;
+- `minSdk = 24`;
+- `compileSdk` e `targetSdk` atuais, salvo necessidade técnica justificada.
+
+Não utilizar Kotlin para substituir Java.
+
+Não utilizar Jetpack Compose.
+
+Não alterar o `applicationId` sem necessidade.
+
+---
+
+# 2. REGRA FUNDAMENTAL: PRESERVAR O QUE JÁ FOI CORRIGIDO
+
+A versão atual já implementa corretamente diversas melhorias.
+
+Preservar:
+
+- os oito cartões do Dashboard;
+- ausência da antiga navegação inferior;
+- ausência dos três indicadores superiores;
+- movimentação de cartões no Kanban;
+- vencimento opcional e editável;
+- exclusão de quadros;
+- ordenação das etapas Kaizen por `orderIndex`;
+- bloqueio visual das etapas futuras;
+- persistência parcial da sessão Pomodoro;
+- múltiplos relatórios A3;
+- relação Seiri → itens essenciais → Seiton;
+- controle de observers do Método 5S;
+- exclusão e edição de itens;
+- registro explícito da conclusão de rotinas;
+- Pareto iniciado somente após o relato do usuário;
+- gerenciamento de tags;
+- Room com migrations explícitas;
+- inserção de dados de demonstração sem apagar automaticamente os dados reais;
+- Material 3;
+- cores dinâmicas implementadas em `OrganizerApplication`;
+- temas claro e escuro.
+
+**Não desfazer essas implementações.**
+
+Quando um comportamento já estiver correto, preserve-o.
+
+---
+
+# 3. KANBAN — ITEMTOUCHHELPER E REORDENAÇÃO
+
+As operações principais do Kanban estão implementadas.
+
+Entretanto, existe um problema no ciclo de vida do `ItemTouchHelper`.
+
+Atualmente, o `KanbanColumnAdapter` cria e conecta um novo `ItemTouchHelper` sempre que um ViewHolder é vinculado.
+
+Isso pode acumular listeners, decorações e mecanismos de arraste.
+
+## 3.1 Corrigir o ItemTouchHelper
+
+Refatorar a implementação para:
+
+- manter o helper associado ao ViewHolder;
+- criar e anexar uma única vez;
+- não acumular helpers durante a reciclagem;
+- desconectar corretamente quando necessário;
+- não permitir que um helper antigo manipule uma coluna reciclada.
+
+## 3.2 Adapter interno
+
+Evitar recriar desnecessariamente o Adapter e o LayoutManager do RecyclerView interno a cada vinculação.
+
+Preservar a posição de rolagem e a identidade dos cartões.
+
+## 3.3 Reordenação transacional
+
+Atualmente, há atualizações de posição realizadas em operações individuais.
+
+Corrigir para utilizar uma operação transacional ou mecanismo equivalente.
+
+Requisitos:
+
+- capturar uma cópia imutável da lista;
+- atualizar as posições;
+- evitar valores duplicados;
+- atualizar a coluna de origem e a de destino;
+- persistir a operação como um conjunto coerente.
+
+Não utilizar uma referência mutável da lista da interface dentro de uma tarefa assíncrona.
+
+## 3.4 Preservação
+
+Manter:
+
+- Drag-and-Drop;
+- movimentação entre colunas;
+- edição;
+- exclusão;
+- vencimento opcional;
+- múltiplos quadros.
+
+Não alterar automaticamente o vencimento dos cartões.
+
+---
+
+# 4. KAIZEN — CORRIGIR A PROGRESSÃO E A ORDEM
+
+A consulta atual por `orderIndex` já representa uma melhoria.
+
+Entretanto, a inserção e a exclusão de etapas ainda podem produzir índices duplicados.
+
+## 4.1 Índice sequencial
+
+Ao inserir uma nova etapa, não utilizar simplesmente:
+
+`current.size()`
+
+ou:
+
+`existing.size()`
+
+Calcular a próxima posição de forma segura, preferencialmente:
+
+`MAX(orderIndex) + 1`
+
+Alternativamente, normalizar todos os índices dentro de uma transação.
+
+A ordenação deve ser determinística.
+
+## 4.2 Etapas inválidas
+
+Corrigir o tratamento de etapas não encontradas.
+
+Se o índice da etapa for `-1`, rejeitar a operação.
+
+Não permitir que uma etapa inexistente:
+
+- seja concluída;
+- provoque reversão de todas as outras;
+- altere o progresso;
+- modifique a sequência.
+
+## 4.3 Progressão na camada de negócio
+
+A validação atual não pode depender somente do Adapter ou dos listeners da Activity.
+
+Implementar a regra de progressão em uma camada de negócio ou Repository.
+
+Preferencialmente, utilizar uma operação transacional no Room para:
+
+1. verificar a etapa;
+2. verificar a anterior;
+3. atualizar a conclusão;
+4. liberar a próxima;
+5. recalcular o progresso;
+6. atualizar as etapas posteriores quando houver reversão.
+
+Impedir estados inconsistentes provocados por cliques rápidos ou chamadas concorrentes.
+
+## 4.4 Desmarcar etapa anterior
+
+Se o usuário desmarcar uma etapa já concluída:
+
+- verificar as etapas posteriores;
+- pedir confirmação quando houver perda de progresso;
+- bloquear ou reverter as etapas que dependem da anterior;
+- recalcular o percentual;
+- persistir tudo corretamente.
+
+Uma etapa posterior nunca pode permanecer concluída quando sua dependência anterior estiver pendente.
+
+## 4.5 Aceitação das sugestões
+
+Corrigir a inserção de etapas sugeridas pela IA.
+
+Atualmente, a validação de duplicatas não protege suficientemente contra linhas repetidas dentro da própria sugestão.
+
+Utilizar um `Set` de nomes normalizados para validar:
+
+- etapas existentes;
+- etapas presentes na nova resposta;
+- duplicatas dentro da própria sugestão.
+
+Não aceitar respostas vazias ou inválidas.
+
+Ao aceitar:
+
+- validar a quantidade de etapas;
+- normalizar os textos;
+- atribuir `orderIndex`;
+- salvar em transação;
+- atualizar a interface somente após sucesso.
+
+## 4.6 Respostas e notificações da IA
+
+Validar:
+
+- horário;
+- dias da semana;
+- frequência;
+- campos obrigatórios;
+- consistência da resposta.
+
+Não substituir valores inválidos por horários padrão sem informar o usuário.
+
+Preservar a possibilidade de aceitar, editar ou rejeitar sugestões.
+
+Não gerar etapas duplicadas ao aceitar a mesma sugestão repetidamente.
+
+---
+
+# 5. POMODORO — CORRIGIR CICLO DE VIDA E DUPLICAÇÃO DO TIMER
+
+O Pomodoro já possui persistência parcial, mas há uma falha importante:
+
+`onPause()` grava o estado sem cancelar o `CountDownTimer`.
+
+Depois, `onResume()` pode restaurar a sessão e criar outro timer.
+
+Isso pode resultar em contagem duplicada.
+
+## 5.1 Uma única fonte de tempo
+
+Refatorar a sessão para utilizar timestamps como fonte de verdade.
+
+Persistir:
+
+- estado atual;
+- foco ou descanso;
+- duração configurada;
+- horário previsto de término;
+- tempo restante quando pausado;
+- estado pausado ou ativo;
+- ciclos completados;
+- ID da sessão.
+
+O `CountDownTimer` deverá ser apenas uma representação visual do tempo restante, nunca a única fonte de verdade.
+
+## 5.2 Corrigir onPause/onResume
+
+Ao sair da Activity:
+
+- persistir o estado;
+- evitar dois timers ativos;
+- cancelar ou suspender corretamente o timer visual.
+
+Ao voltar:
+
+- recalcular o restante a partir dos timestamps;
+- reconstruir somente um timer;
+- não reiniciar uma sessão pausada;
+- não contabilizar tempo duas vezes.
+
+## 5.3 Processo encerrado
+
+Se o processo Android for encerrado durante uma sessão:
+
+- permitir recuperar o estado;
+- identificar se o período terminou;
+- finalizar o registro de forma idempotente;
+- evitar registros duplicados;
+- atualizar estatísticas corretamente.
+
+O receiver de notificações deve conseguir identificar o ID da sessão e o prazo esperado, ignorando alarmes antigos ou inválidos.
+
+## 5.4 Ciclos e botão pular
+
+Corrigir a semântica dos ciclos.
+
+Atualmente, pular um período pode afetar o incremento do ciclo e a determinação do descanso longo.
+
+Definir claramente:
+
+- foco concluído;
+- descanso concluído;
+- foco pulado;
+- descanso pulado;
+- ciclo concluído.
+
+Pular um foco não pode ser contabilizado como foco completo.
+
+Pular um descanso não pode ser contabilizado como descanso completo.
+
+Incrementar os ciclos somente conforme a regra definida para a conclusão real dos períodos.
+
+## 5.5 Histórico
+
+Registrar os tempos efetivamente concluídos.
+
+Não utilizar automaticamente a duração configurada como se todo o período tivesse sido executado.
+
+Manter os contadores gerais e o histórico coerentes.
+
+## 5.6 Alarmes
+
+Um alerta de término deve ser emitido somente uma vez.
+
+Não agendar uma nova notificação redundante depois de o `CountDownTimer` já ter terminado.
+
+Ao pausar, cancelar o alarme anterior.
+
+Ao continuar, agendar o novo término.
+
+Ao encerrar, cancelar tudo relacionado à sessão.
+
+## 5.7 Limites de configuração
+
+Impor limites razoáveis aos minutos configuráveis.
+
+Utilizar operações com `long` para conversão de minutos em milissegundos.
+
+Evitar overflow.
+
+---
+
+# 6. MÉTODO A3 — CORRIGIR ACESSO AO BANCO EM SEGUNDO PLANO
+
+O salvamento ainda acessa `docList`, uma coleção da interface, dentro de uma tarefa de banco executada em segundo plano.
+
+Corrigir.
+
+## 6.1 Criar consulta direta
+
+Adicionar ao `A3Dao` um método equivalente a:
+
+```java
+A3Document getDocumentById(long id);
+```
+
+Adaptar a assinatura à entidade realmente existente.
+
+No salvamento:
+
+1. capturar ID e campos na thread principal;
+2. construir os dados do relatório;
+3. consultar pelo ID diretamente no DAO;
+4. executar a gravação no executor;
+5. receber o resultado;
+6. atualizar `selectedDocId` na thread principal;
+7. mostrar sucesso somente após confirmação.
+
+Não consultar a lista da Activity em uma thread de banco.
+
+## 6.2 Spinner
+
+O listener do Spinner não deve ser reinstalado indiscriminadamente em todas as atualizações do LiveData.
+
+Instalá-lo uma vez e utilizar os IDs dos relatórios como identidade.
+
+Evitar troca de documento por callback involuntário durante uma atualização do Adapter.
+
+## 6.3 Persistência
+
+Preservar:
+
+- múltiplos relatórios;
+- criação;
+- edição;
+- exclusão;
+- seleção;
+- orientação landscape.
+
+Não permitir que uma gravação em andamento sobrescreva outro relatório selecionado posteriormente.
+
+---
+
+# 7. MÉTODO 5S — ROTINAS E EXECUÇÕES
+
+A relação entre Seiri e Seiton já está correta.
+
+Preservar a consulta:
+
+- origem SEIRI;
+- item essencial.
+
+Não criar itens independentes no Seiton.
+
+## 7.1 Configuração de dias e frequência
+
+A interface atual não permite configurar adequadamente os dias e a frequência das rotinas.
+
+Completar a criação e a edição.
+
+Campos:
+
+- nome;
+- descrição;
+- horário;
+- frequência;
+- dias da semana;
+- ativação.
+
+Permitir exemplos como:
+
+- todos os dias às 18h30;
+- segunda, quarta e sexta às 19h;
+- dias úteis às 08h.
+
+Utilizar seletores Material 3.
+
+## 7.2 Frequência efetiva
+
+A frequência armazenada precisa participar do cálculo do próximo agendamento.
+
+Não basta salvar `routineFrequency`.
+
+Criar uma representação consistente dos dias selecionados e validar sua coerência.
+
+## 7.3 Execução em dia permitido
+
+Atualmente é possível registrar uma execução em um dia que não faz parte da rotina.
+
+Corrigir.
+
+Antes de registrar:
+
+- identificar a data local;
+- verificar se ela corresponde a uma ocorrência programada;
+- impedir conclusão fora da frequência;
+- evitar duas conclusões para a mesma ocorrência.
+
+## 7.4 Streak
+
+Calcular consistência com base nas ocorrências esperadas.
+
+Exemplo:
+
+Rotina: segunda, quarta e sexta.
+
+O streak deve acompanhar as execuções programadas, sem exigir execução na terça ou quinta.
+
+Não exibir dias consecutivos quando o indicador representa quantidade de ocorrências concluídas.
+
+Utilizar um nome e uma métrica coerentes.
+
+## 7.5 Idempotência
+
+O registro de execução deve ser protegido contra cliques rápidos e duplicações.
+
+Criar uma estrutura ou restrição que permita uma única execução por rotina e ocorrência esperada.
+
+Executar a atualização da execução e do streak em transação.
+
+## 7.6 Ordem das operações
+
+Ao ativar ou editar:
+
+1. validar dados;
+2. salvar no banco;
+3. confirmar sucesso;
+4. cancelar agendamentos antigos;
+5. programar a nova ocorrência.
+
+Se o banco falhar, não deixar o AlarmManager em estado diferente do banco.
+
+---
+
+# 8. MÉTODO 5S — MÚLTIPLOS PROJETOS
+
+Atualmente, o aplicativo seleciona automaticamente um único projeto 5S padrão.
+
+O Organizer deve permitir que o usuário organize diferentes situações de melhoria.
+
+Implementar gerenciamento de projetos 5S:
+
+- criar projeto;
+- nomear projeto;
+- editar;
+- excluir com confirmação;
+- selecionar projeto;
+- consultar projetos existentes.
+
+Cada projeto deve manter seus próprios:
+
+- itens Seiri;
+- itens Seiton;
+- checklists Seiso;
+- rotinas;
+- histórico.
+
+Não misturar dados de projetos diferentes.
+
+A exclusão deve respeitar os relacionamentos e cancelar agendamentos das rotinas daquele projeto.
+
+---
+
+# 9. NOTIFICAÇÕES — CORREÇÃO CENTRALIZADA
+
+Esta é uma das prioridades mais importantes.
+
+Revisar:
+
+- NotificationHelper;
+- NotificationReceiver;
+- MainActivity;
+- SettingsActivity;
+- AndroidManifest;
+- agendamentos Kaizen;
+- agendamentos 5S;
+- Pomodoro.
+
+## 9.1 goAsync e recuperação após reinicialização
+
+Atualmente, o receiver utiliza `goAsync()`, mas chama `rescheduleAllAlarms()`, que inicia outra tarefa assíncrona e retorna imediatamente.
+
+Dessa forma, `finish()` pode ser chamado antes da reconstrução real dos alarmes.
+
+Corrigir.
+
+Criar um método que execute a consulta do banco e o agendamento no mesmo fluxo controlado.
+
+O `PendingResult.finish()` só deve ocorrer depois que todas as operações de recuperação terminarem.
+
+Não criar uma segunda fila de execução que sobreviva ao `finish()`.
+
+## 9.2 Recuperação
+
+Garantir recuperação em:
+
+- BOOT_COMPLETED;
+- TIME_SET;
+- TIMEZONE_CHANGED.
+
+Consultar o banco, identificar registros ativos e reconstruir os agendamentos.
+
+## 9.3 Permissão restaurada
+
+Se o usuário revogar notificações e posteriormente conceder novamente pelas configurações do Android, o aplicativo deve detectar a mudança e reconstruir os alarmes.
+
+Não depender exclusivamente do callback inicial de solicitação da permissão.
+
+## 9.4 Cancelar tudo
+
+O `cancelAllAlarms()` atual cancela rotinas e metas, mas não cancela adequadamente os alarmes do Pomodoro.
+
+Corrigir.
+
+Ao desativar notificações globalmente:
+
+- cancelar alarmes do 5S;
+- cancelar alarmes do Kaizen;
+- cancelar alarmes de foco;
+- cancelar alarmes de descanso;
+- cancelar notificações visíveis do Organizer.
+
+Preservar os dados e as preferências individuais.
+
+Ao reativar, reagendar as notificações válidas.
+
+## 9.5 Recorrência
+
+Cada notificação recorrente deve:
+
+1. validar a configuração;
+2. verificar se o registro continua ativo;
+3. verificar a preferência global;
+4. verificar permissões;
+5. identificar a próxima ocorrência;
+6. persistir o próximo horário;
+7. reagendar uma única vez.
+
+A ausência de permissão de exibição não pode interromper silenciosamente a lógica de recorrência.
+
+## 9.6 Alarmes exatos
+
+O projeto utiliza fallback para alarmes inexatos.
+
+Preservar essa proteção contra `SecurityException`.
+
+Entretanto, implementar um fluxo claro para solicitar a autorização especial quando a precisão for essencial.
+
+Verificar `canScheduleExactAlarms()` quando aplicável.
+
+Não solicitar permissões privilegiadas sem justificar sua necessidade.
+
+## 9.7 Validação
+
+Não substituir silenciosamente um horário inválido por 09:00.
+
+Não interpretar dias inválidos como todos os dias.
+
+Validar:
+
+- formato `HH:mm`;
+- dias da semana;
+- frequência;
+- registro associado.
+
+Se houver erro, informar e impedir o agendamento incorreto.
+
+---
+
+# 10. EISENHOWER — GOOGLE AGENDA
+
+Preservar o mecanismo `CalendarContract`, corrigindo sua seleção de calendário e operações de sincronização.
+
+## 10.1 Calendário Google elegível
+
+O método atual aceita calendários primários ou o primeiro calendário disponível como fallback.
+
+Isso está errado.
+
+Selecionar somente calendários realmente elegíveis para sincronização com Google.
+
+Verificar `ACCOUNT_TYPE` e os atributos corretos do calendário.
+
+Uma conta Google Workspace também deve ser considerada quando o provider indicar que é uma conta Google.
+
+Nunca selecionar silenciosamente um calendário local ou de outro provedor.
+
+Se não existir calendário Google elegível:
+
+- informar o usuário;
+- manter a tarefa local;
+- não marcar como sincronizada.
+
+## 10.2 Data e horário
+
+Não atribuir automaticamente:
+
+- 09:00;
+- horário atual;
+- horário atual mais uma hora.
+
+Exigir data e horário explícitos para sincronizar.
+
+Se o usuário desejar um horário padrão, ele poderá configurá-lo voluntariamente nas preferências.
+
+A tarefa local poderá existir sem data e horário, mas não deverá ser declarada sincronizada.
+
+## 10.3 Validação de data
+
+Utilizar parsing estrito.
+
+Não aceitar datas impossíveis normalizadas automaticamente.
+
+Armazenar de maneira consistente:
+
+- data local;
+- horário local;
+- fuso;
+- timestamp correspondente.
+
+Evitar divergência entre os campos exibidos e o timestamp salvo.
+
+## 10.4 Atualização de eventos
+
+Quando houver `googleCalendarEventId`:
+
+- verificar a existência do evento;
+- tentar atualizar;
+- verificar o número de registros modificados;
+- preservar o ID em falhas temporárias.
+
+Não inserir automaticamente outro evento quando uma atualização falhar por permissão, provider indisponível ou erro desconhecido.
+
+Só considerar inserir um novo evento quando for possível confirmar que o anterior não existe mais.
+
+## 10.5 Exclusão
+
+Alterar o método `deleteTaskFromCalendar()` para retornar um resultado verificável.
+
+Diferenciar:
+
+- excluído;
+- evento já inexistente;
+- falta de permissão;
+- falha de acesso;
+- erro do provider.
+
+Não apagar o vínculo local em todos os casos.
+
+Se a exclusão remota falhar, preservar informações suficientes para tentar novamente.
+
+## 10.6 Salvamento assíncrono
+
+A `EisenhowerFragment` atualmente pode mostrar sucesso e fechar o diálogo antes de o banco e o Google Agenda terminarem suas operações.
+
+Corrigir.
+
+Mostrar estados separados:
+
+- tarefa salva localmente;
+- aguardando sincronização;
+- sincronizada;
+- falha na sincronização.
+
+Não apresentar sucesso de calendário sem confirmação.
+
+Capturar `applicationContext` antes de iniciar tarefas que possam sobreviver ao Fragment.
+
+Não acessar `requireContext()` depois que o Fragment puder ter sido destruído.
+
+## 10.7 Configurações
+
+O estado de calendário não deve ser chamado de “Conectado” apenas porque as permissões estão concedidas.
+
+Diferenciar:
+
+- permissões concedidas;
+- calendário Google encontrado;
+- calendário selecionado;
+- evento sincronizado.
+
+---
+
+# 11. BLOCO DE NOTAS — MIGRATION E TAGS
+
+A entidade Tag atualmente possui índice único sobre `name`.
+
+Entretanto, a consulta de duplicidade utiliza normalização por `LOWER(TRIM(name))`.
+
+O banco precisa proteger a mesma regra.
+
+## 11.1 Normalização
+
+Adicionar um campo normalizado, como:
+
+`normalizedName`
+
+O valor deve ser calculado antes de salvar:
+
+- remover espaços externos;
+- normalizar maiúsculas/minúsculas;
+- aplicar regra consistente de comparação.
+
+Criar índice único nesse campo.
+
+## 11.2 Migration segura
+
+A versão anterior do banco podia conter tags duplicadas.
+
+A migration que adiciona uma restrição única não pode falhar quando existirem duplicatas.
+
+Antes de criar o novo índice:
+
+1. identificar tags equivalentes;
+2. selecionar um registro canônico;
+3. preservar as informações necessárias;
+4. atualizar associações das notas;
+5. remover duplicatas;
+6. criar o índice único.
+
+Criar migrations incrementais que funcionem tanto para usuários atualizados da versão 2 quanto para usuários já instalados na versão 3.
+
+Não utilizar exclusão destrutiva do banco.
+
+## 11.3 Gerenciamento
+
+Preservar criação, edição e exclusão de tags.
+
+Ao excluir:
+
+- preservar notas;
+- remover somente a associação;
+- atualizar filtros.
+
+Ao editar:
+
+- validar duplicidade;
+- atualizar notas relacionadas;
+- impedir colisões.
+
+---
+
+# 12. PARETO — DISTINGUIR DADOS MEDIDOS DE ESTIMADOS
+
+O fluxo sem análise automática está correto. Preservar.
+
+Ajustar a análise do Gemini.
+
+## 12.1 Base da análise
+
+O resultado precisa informar se os dados são:
+
+- MEASURED: medidos ou calculados com dados fornecidos;
+- ESTIMATED: estimados;
+- QUALITATIVE: qualitativos.
+
+Não apresentar estimativas qualitativas como percentuais matematicamente exatos.
+
+## 12.2 Relato qualitativo
+
+Quando o usuário não fornecer números suficientes:
+
+- identificar fatores;
+- ordenar por impacto provável;
+- explicar a justificativa;
+- destacar os fatores prioritários;
+- não inventar percentuais.
+
+## 12.3 Gráfico
+
+Quando houver dados quantitativos suficientes, apresentar gráfico proporcional.
+
+Quando houver apenas informações qualitativas, utilizar representação visual por níveis de impacto, sem proporções numéricas fictícias.
+
+## 12.4 Validação
+
+Validar:
+
+- JSON;
+- campos;
+- tipos;
+- fatores;
+- recomendações;
+- valores;
+- somas;
+- consistência.
+
+Se uma resposta for inválida:
+
+- não apresentar resultado parcial como análise concluída;
+- mostrar erro;
+- preservar o texto;
+- permitir nova tentativa.
+
+---
+
+# 13. GEMINI — MODELO E SEGURANÇA
+
+O serviço atual utiliza `gemini-2.5-flash` como identificador fixo.
+
+Verificar a disponibilidade real do modelo para este projeto no Google AI Studio e na API Gemini.
+
+Não trocar o modelo arbitrariamente.
+
+Utilizar um modelo oficialmente disponível e autorizado para novos projetos, quando necessário.
+
+Centralizar:
+
+- modelo;
+- endpoint;
+- timeout;
+- tratamento de erro.
+
+Revisar o parser de respostas.
+
+Não depender exclusivamente de `candidates[0].content.parts[0].text` sem verificar se existe resposta válida e se houve bloqueio por segurança, ausência de candidatos ou encerramento incompleto.
+
+## Segurança
+
+A chave compilada no APK por meio de `BuildConfig.GEMINI_API_KEY` pode ser extraída.
+
+Para produção:
+
+- preferir backend que mantenha a credencial protegida;
+- não versionar secrets;
+- não registrar API keys em logs;
+- tratar requisições, limite de uso e timeout;
+- documentar claramente qualquer limitação.
+
+Não afirmar que a IA está online apenas porque existe uma chave configurada.
+
+A chamada deve ser realmente testada quando houver credenciais.
+
+---
+
+# 14. DADOS DE DEMONSTRAÇÃO E LIMPEZA
+
+Preservar o comportamento atual de não apagar dados reais ao inserir exemplos.
+
+Entretanto, aperfeiçoar a operação.
+
+## Inserir demonstração
+
+- evitar duplicação;
+- utilizar transação;
+- não inserir tudo repetidamente;
+- preservar registros reais;
+- identificar os registros de exemplo.
+
+## Limpar dados
+
+Ao limpar:
+
+- pedir confirmação;
+- cancelar alarmes do Organizer;
+- cancelar notificações visíveis;
+- apagar dados locais em transação;
+- limpar preferências da sessão Pomodoro;
+- tratar eventos remotos do Google Agenda;
+- informar quando uma exclusão externa falhar.
+
+Não declarar limpeza completa de integrações externas quando ainda existirem eventos que não puderam ser removidos.
+
+---
+
+# 15. DESIGN — GOOGLE MATERIAL DESIGN 3 / MATERIAL YOU
+
+O aplicativo já possui:
+
+- `Theme.Material3.DayNight.NoActionBar`;
+- cores dinâmicas aplicadas pelo `OrganizerApplication`;
+- temas claro e escuro;
+- identidade cromática por módulo.
+
+**Não substituir tudo.**
+
+Aprimorar o que existe e aplicar o padrão de forma consistente em todas as oito funcionalidades.
+
+## 15.1 Tipografia
+
+Utilizar Roboto ou `sans-serif` do sistema como padrão.
+
+Criar uma escala tipográfica centralizada:
+
+- títulos;
+- títulos de cards;
+- corpo;
+- descrições;
+- legendas;
+- botões;
+- tags.
+
+Não utilizar fontes proprietárias não incluídas no projeto.
+
+Manter fonte monoespaçada para cronômetros e indicadores numéricos quando apropriado.
+
+## 15.2 Material You
+
+Preservar `DynamicColors.applyToActivitiesIfAvailable()`.
+
+Aplicar cores dinâmicas às superfícies e componentes gerais do aplicativo.
+
+Preservar as cores características dos módulos.
+
+Não deixar que o esquema dinâmico elimine a identidade de Kanban, Kaizen, Pomodoro, A3, 5S, Pareto, Eisenhower e Notas.
+
+## 15.3 Cores oficiais do Organizer
+
+Preservar:
+
+- Kanban: `#2563EB`
+- Kaizen: `#10B981`
+- Pomodoro: `#EF4444`
+- A3: `#4F46E5`
+- 5S: `#059669`
+- Pareto: `#8B5CF6`
+- Eisenhower: `#DC2626`, `#F59E0B`, `#3B82F6`, `#9CA3AF`
+- Notas: `#FBBF24`
+
+Base clara: `#F8FAFC`
+
+Base escura: `#0F172A`
+
+## 15.4 Tema escuro
+
+Revisar todas as telas.
+
+Em especial, verificar `FiveSItemAdapter`, que utiliza cores fixas para texto e fundos de cartões.
+
+Não permitir:
+
+- texto preto sobre verde escuro;
+- texto escuro sobre fundo escuro;
+- cards ilegíveis;
+- botões com contraste insuficiente;
+- campos de texto claros inadequados;
+- tags invisíveis.
+
+Preservar as cores do módulo, ajustando o contraste do texto e das superfícies.
+
+## 15.5 Edge-to-edge
+
+O projeto tem `targetSdk = 36`.
+
+O tratamento de insets não deve ficar restrito à MainActivity.
+
+Implementar um mecanismo reutilizável para todas as Activities e Fragments que precisam considerar:
+
+- barra de status;
+- barra de navegação;
+- recortes;
+- teclado;
+- orientação horizontal.
+
+Utilizar `WindowInsetsCompat`.
+
+Não permitir conteúdo sob as barras do sistema ou escondido pelo teclado.
+
+Testar especialmente o Método A3 em landscape.
+
+## 15.6 Componentes
+
+Utilizar componentes Material compatíveis com Java e XML.
+
+Padronizar:
+
+- cards;
+- botões;
+- campos;
+- seletores de data/hora;
+- chips;
+- diálogos;
+- Bottom Sheets;
+- estados vazios;
+- estados de carregamento;
+- erros.
+
+Evitar redesenhar cada módulo como se fosse um aplicativo separado.
+
+O Organizer deve ter uma única identidade visual.
+
+---
+
+# 16. BUILD E COMPILAÇÃO
+
+O ZIP atual possui Gradle Wrapper completo.
+
+Preservar as versões atuais do Gradle e Android Gradle Plugin, a menos que exista uma incompatibilidade real.
+
+Executar:
+
+`./gradlew clean assembleDebug testDebugUnitTest`
+
+Quando possível, também executar os testes instrumentados.
+
+Corrigir erros de:
+
+- imports;
+- Java;
+- XML;
+- recursos;
+- Manifest;
+- Room;
+- Gradle;
+- dependências.
+
+Não afirmar que o build foi concluído se ele não foi executado.
+
+Não remover bibliotecas necessárias apenas para conseguir compilar.
+
+---
+
+# 17. TESTES OBRIGATÓRIOS
+
+Criar testes para:
+
+### Kanban
+- reordenação;
+- movimentação;
+- persistência;
+- estabilidade de observers e ItemTouchHelper.
+
+### Kaizen
+- ordenação;
+- inserção após exclusão;
+- progressão;
+- reversão;
+- duplicação de sugestões;
+- dias de notificação.
+
+### Pomodoro
+- pausa;
+- retomada;
+- rotação;
+- destruição da Activity;
+- recuperação;
+- contagem de ciclos;
+- encerramento por alarme.
+
+### A3
+- busca por ID;
+- salvamento concorrente;
+- seleção;
+- múltiplos documentos.
+
+### 5S
+- origem do Seiton;
+- frequência;
+- dias;
+- execução única;
+- streak semanal;
+- múltiplos projetos;
+- reordenação.
+
+### Pareto
+- JSON válido;
+- resposta incompleta;
+- estimativa qualitativa;
+- percentual medido;
+- consistência do gráfico.
+
+### Eisenhower
+- calendário Google elegível;
+- ausência de calendário;
+- data/horário inválidos;
+- criação;
+- atualização;
+- exclusão;
+- falha externa;
+- ausência de duplicação.
+
+### Notas
+- normalização;
+- unicidade;
+- edição;
+- exclusão;
+- migration de banco antigo.
+
+### Notificações
+- permissão negada;
+- permissão concedida;
+- preferência global desativada;
+- reativação;
+- reinicialização;
+- alteração de fuso;
+- alarmes exatos indisponíveis;
+- cancelamento total.
+
+Não afirmar que um teste foi executado sem evidência.
+
+---
+
+# 18. RELATÓRIO FINAL
+
+Ao terminar, apresentar:
+
+## 1. Correções realizadas
+Listar as correções efetivamente implementadas.
+
+## 2. Correções não concluídas
+Explicar o que não foi resolvido.
+
+## 3. Alterações por módulo
+Relatar os oito módulos individualmente.
+
+## 4. Notificações
+Descrever permissões, alarmes, recorrência e recuperação.
+
+## 5. Google Agenda
+Informar o estado real da criação, edição e exclusão de eventos.
+
+## 6. Gemini
+Informar o modelo utilizado e limitações de configuração.
+
+## 7. Banco
+Informar migrations e preservação dos dados.
+
+## 8. Design
+Listar mudanças do Material Design 3, Material You, tipografia, contraste, modo escuro e edge-to-edge.
+
+## 9. Build e testes
+Informar o que foi efetivamente executado.
+
+## 10. Arquivos
+Listar os arquivos modificados e novos.
+
+Classificar cada problema como:
+
+- CORRIGIDO;
+- PARCIALMENTE CORRIGIDO;
+- NECESSITA CONFIGURAÇÃO EXTERNA;
+- NÃO CORRIGIDO.
+
+Não marcar como concluído algo que foi apenas criado visualmente.
+
+---
+
+# REGRA FINAL
+
+O resultado precisa ser o mesmo Organizer, com seus oito módulos preservados, porém com implementação mais confiável.
+
+Não recriar o aplicativo.
+
+Não migrar para Kotlin.
+
+Não migrar para Jetpack Compose.
+
+Não apagar dados reais.
+
+Não criar eventos duplicados.
+
+Não contabilizar ciclos ou streaks sem execução real.
+
+Não interromper notificações recorrentes por problemas temporários de permissão.
+
+Não apresentar sincronizações malsucedidas como concluídas.
+
+Não inventar dados quantitativos para Pareto.
+
+**Corrija o código real, preserve o que já funciona e valide tecnicamente cada alteração.**
