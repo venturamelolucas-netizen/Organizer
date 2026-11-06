@@ -68,6 +68,19 @@ public class GoogleCalendarService {
         return -1;
     }
 
+    public static boolean eventExists(Context context, long eventId) {
+        if (!hasCalendarPermissions(context) || eventId <= 0) return false;
+        try {
+            ContentResolver cr = context.getContentResolver();
+            Uri uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId);
+            try (Cursor cursor = cr.query(uri, new String[]{CalendarContract.Events._ID}, null, null, null)) {
+                return cursor != null && cursor.moveToFirst();
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static long syncTaskToCalendar(Context context, EisenhowerTask task) {
         if (!hasCalendarPermissions(context)) {
             return -1;
@@ -92,15 +105,15 @@ public class GoogleCalendarService {
 
         try {
             if (task.getGoogleCalendarEventId() > 0) {
-                // Update existing event
-                Uri updateUri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, task.getGoogleCalendarEventId());
-                int rows = cr.update(updateUri, values, null, null);
-                if (rows > 0) {
+                if (eventExists(context, task.getGoogleCalendarEventId())) {
+                    // Update existing event without duplicating
+                    Uri updateUri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, task.getGoogleCalendarEventId());
+                    cr.update(updateUri, values, null, null);
                     return task.getGoogleCalendarEventId();
                 }
             }
 
-            // Insert new event
+            // Insert new event only if existing event does not exist
             Uri uri = cr.insert(CalendarContract.Events.CONTENT_URI, values);
             if (uri != null) {
                 return Long.parseLong(uri.getLastPathSegment());

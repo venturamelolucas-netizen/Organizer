@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import com.example.organizer.data.dao.A3Dao;
@@ -28,8 +29,6 @@ import com.example.organizer.data.entity.Note;
 import com.example.organizer.data.entity.PomodoroSession;
 import com.example.organizer.data.entity.Tag;
 
-import java.util.concurrent.Executors;
-
 @Database(
     entities = {
         KanbanBoard.class,
@@ -45,12 +44,20 @@ import java.util.concurrent.Executors;
         Note.class,
         Tag.class
     },
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 public abstract class OrganizerDatabase extends RoomDatabase {
 
     private static volatile OrganizerDatabase INSTANCE;
+
+    public static final Migration MIGRATION_1_2 = new Migration(1, 2) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE fives_items ADD COLUMN lastExecutionDate INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE fives_items ADD COLUMN nextExecutionDate INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 
     public abstract KanbanDao kanbanDao();
     public abstract KaizenDao kaizenDao();
@@ -69,17 +76,7 @@ public abstract class OrganizerDatabase extends RoomDatabase {
                             OrganizerDatabase.class,
                             "organizer_master_db"
                     )
-                    .fallbackToDestructiveMigration()
-                    .addCallback(new Callback() {
-                        @Override
-                        public void onCreate(@NonNull SupportSQLiteDatabase db) {
-                            super.onCreate(db);
-                            // Populate initial sample demo data in background
-                            Executors.newSingleThreadExecutor().execute(() -> {
-                                SampleDataGenerator.preloadSampleData(getInstance(context));
-                            });
-                        }
-                    })
+                    .addMigrations(MIGRATION_1_2)
                     .build();
                 }
             }

@@ -46,8 +46,26 @@ public interface NoteDao {
     @Insert
     long insertTag(Tag tag);
 
+    @Update
+    void updateTag(Tag tag);
+
     @Delete
     void deleteTag(Tag tag);
+
+    @Query("DELETE FROM tags WHERE id = :tagId")
+    void deleteTagById(long tagId);
+
+    @Query("UPDATE notes SET tag = '' WHERE tag = :oldTagName")
+    void removeTagFromNotes(String oldTagName);
+
+    @Query("UPDATE notes SET tag = :newTagName WHERE tag = :oldTagName")
+    void updateTagNameInNotes(String oldTagName, String newTagName);
+
+    @Query("SELECT * FROM tags WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name)) LIMIT 1")
+    Tag getTagByName(String name);
+
+    @Query("DELETE FROM tags")
+    void deleteAllTags();
 
     @Query("DELETE FROM notes")
     void deleteAllNotes();

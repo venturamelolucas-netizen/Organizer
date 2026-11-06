@@ -20,6 +20,7 @@ import java.util.Locale;
 public class SampleDataGenerator {
 
     public static void preloadSampleData(OrganizerDatabase db) {
+        clearAllData(db);
         long now = System.currentTimeMillis();
         SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         String todayStr = sdfDate.format(new Date(now));
@@ -81,22 +82,34 @@ public class SampleDataGenerator {
                 now
         ));
 
-        // Seiri items
-        FiveSItem itemEssential = new FiveSItem(projId, "SEIRI", "Notebook e Carregador", "Equipamento principal de trabalho");
-        itemEssential.setEssential(true);
-        db.fiveSDao().insertItem(itemEssential);
+        // 5S Items:
+        // Fluxo correto: Seiri decide o que é essencial.
+        // Itens essenciais do Seiri são então organizados no Seiton com local e regras.
+        FiveSItem itemEssential1 = new FiveSItem(projId, "SEIRI", "Notebook e Carregador", "Equipamento principal de trabalho");
+        itemEssential1.setEssential(true);
+        itemEssential1.setLocation("Mesa principal");
+        itemEssential1.setCategory("Equipamento");
+        itemEssential1.setPlacementRule("Posicionado sobre a base refrigerada centralizada");
+        itemEssential1.setOrderIndex(0);
+        db.fiveSDao().insertItem(itemEssential1);
+
+        FiveSItem itemEssential2 = new FiveSItem(projId, "SEIRI", "Suporte ergonômico", "Posicionado na altura dos olhos");
+        itemEssential2.setEssential(true);
+        itemEssential2.setLocation("Mesa principal");
+        itemEssential2.setCategory("Ergonomia");
+        itemEssential2.setPlacementRule("Sempre alinhado com o monitor");
+        itemEssential2.setOrderIndex(1);
+        db.fiveSDao().insertItem(itemEssential2);
 
         FiveSItem itemDiscard = new FiveSItem(projId, "SEIRI", "Documentos impressos obsoletos", "Papéis de 2022 sem validade jurídica");
         itemDiscard.setDiscarded(true);
+        itemDiscard.setEssential(false);
         db.fiveSDao().insertItem(itemDiscard);
 
-        // Seiton items
-        FiveSItem itemSeiton = new FiveSItem(projId, "SEITON", "Suporte ergonômico", "Posicionado na altura dos olhos");
-        itemSeiton.setEssential(true);
-        itemSeiton.setLocation("Mesa principal");
-        itemSeiton.setCategory("Ergonomia");
-        itemSeiton.setPlacementRule("Sempre centralizado com o monitor");
-        db.fiveSDao().insertItem(itemSeiton);
+        FiveSItem itemPending = new FiveSItem(projId, "SEIRI", "Cabos USB sobressalentes", "Gaveta lateral");
+        itemPending.setEssential(false);
+        itemPending.setDiscarded(false);
+        db.fiveSDao().insertItem(itemPending);
 
         // Seiso items
         FiveSItem itemSeiso1 = new FiveSItem(projId, "SEISO", "Limpar teclado e tela com álcool isopropílico", "Checklist de manutenção");
@@ -110,9 +123,10 @@ public class SampleDataGenerator {
         // Seiketsu + Shitsuke
         FiveSItem itemRoutine = new FiveSItem(projId, "SEIKETSU_SHITSUKE", "Revisão e limpeza de 5 minutos", "Rotina diária ao encerrar o trabalho");
         itemRoutine.setRoutineFrequency("Diário");
+        itemRoutine.setRoutineDays("Todos os dias");
         itemRoutine.setRoutineTime("18:00");
-        itemRoutine.setRoutineEnabled(true);
-        itemRoutine.setStreakCount(12);
+        itemRoutine.setRoutineEnabled(false);
+        itemRoutine.setStreakCount(0);
         db.fiveSDao().insertItem(itemRoutine);
 
         // 6. Eisenhower Tasks (all 4 quadrants)
@@ -210,5 +224,6 @@ public class SampleDataGenerator {
         db.fiveSDao().deleteAllProjects();
         db.eisenhowerDao().deleteAllTasks();
         db.noteDao().deleteAllNotes();
+        db.noteDao().deleteAllTags();
     }
 }

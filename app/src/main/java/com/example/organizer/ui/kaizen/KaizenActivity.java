@@ -169,6 +169,8 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
 
         final String[] lastRejected = {null};
         final GeminiService.KaizenSuggestionResult[] currentResult = {null};
+        final String[] customNotifTime = {"20:00"};
+        final String[] customNotifDays = {"Todos os dias"};
 
         Runnable runAiCall = new Runnable() {
             @Override
@@ -207,7 +209,9 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
                                         tvSteps.setText(sb.toString().trim());
 
                                         if (result.suggestedReminderTime != null) {
-                                            tvNotifSuggestion.setText("Horário sugerido: " + result.suggestedReminderTime + " (" + result.suggestedReminderDays + ")");
+                                            customNotifTime[0] = result.suggestedReminderTime;
+                                            customNotifDays[0] = (result.suggestedReminderDays != null) ? result.suggestedReminderDays : "Todos os dias";
+                                            tvNotifSuggestion.setText("Horário sugerido: " + customNotifTime[0] + " (" + customNotifDays[0] + ") • Toque para alterar");
                                         }
                                     }
 
@@ -225,14 +229,44 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
             }
         };
 
+        tvNotifSuggestion.setOnClickListener(v -> {
+            int h = 20, m = 0;
+            try {
+                String[] p = customNotifTime[0].split(":");
+                h = Integer.parseInt(p[0].trim());
+                m = Integer.parseInt(p[1].trim());
+            } catch (Exception ignored) {}
+
+            new TimePickerDialog(this, (view, hourOfDay, minute) -> {
+                customNotifTime[0] = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute);
+                tvNotifSuggestion.setText("Horário configurado: " + customNotifTime[0] + " (" + customNotifDays[0] + ") • Toque para alterar");
+            }, h, m, true).show();
+        });
+
         runAiCall.run();
 
         btnReject.setOnClickListener(v -> {
-            if (currentResult[0] != null) {
-                lastRejected[0] = tvSteps.getText().toString();
-            }
-            Toast.makeText(this, "Gerando nova sugestão alternativa...", Toast.LENGTH_SHORT).show();
-            runAiCall.run();
+            final EditText inputReason = new EditText(this);
+            inputReason.setHint("Ex: Sugestão muito agressiva, passos mais graduais...");
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Nova Sugestão da IA")
+                    .setMessage("Deseja informar um motivo ou ajuste para a nova alternativa?")
+                    .setView(inputReason)
+                    .setPositiveButton("Gerar Alternativa", (d, w) -> {
+                        String reason = inputReason.getText().toString().trim();
+                        StringBuilder rejectionBuilder = new StringBuilder();
+                        rejectionBuilder.append("Sugestão anterior rejeitada:\n")
+                                .append(tvSteps.getText().toString());
+                        if (!reason.isEmpty()) {
+                            rejectionBuilder.append("\nMotivo do usuário: ").append(reason);
+                        }
+                        lastRejected[0] = rejectionBuilder.toString();
+                        Toast.makeText(this, "Gerando nova sugestão alternativa...", Toast.LENGTH_SHORT).show();
+                        runAiCall.run();
+                    })
+                    .setNegativeButton("Cancelar", null)
+                    .show();
         });
 
         btnEdit.setOnClickListener(v -> {
@@ -265,10 +299,8 @@ public class KaizenActivity extends AppCompatActivity implements KaizenGoalAdapt
             }
 
             boolean applyNotif = switchNotif.isChecked();
-            String notifTime = (currentResult[0] != null && currentResult[0].suggestedReminderTime != null)
-                    ? currentResult[0].suggestedReminderTime : "20:00";
-            String notifDays = (currentResult[0] != null && currentResult[0].suggestedReminderDays != null)
-                    ? currentResult[0].suggestedReminderDays : "Todos os dias";
+            String notifTime = customNotifTime[0];
+            String notifDays = customNotifDays[0];
 
             DatabaseClient.getInstance(this).getExecutor().execute(() -> {
                 for (String stepText : finalSteps) {

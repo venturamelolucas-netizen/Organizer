@@ -40,6 +40,9 @@ public interface EisenhowerDao {
     @Delete
     void deleteTask(EisenhowerTask task);
 
+    @Query("SELECT * FROM eisenhower_tasks WHERE googleCalendarEventId > 0")
+    List<EisenhowerTask> getTasksWithCalendarEventSync();
+
     @Query("DELETE FROM eisenhower_tasks")
     void deleteAllTasks();
 }

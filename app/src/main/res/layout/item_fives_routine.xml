@@ -82,9 +82,50 @@
                 android:backgroundTint="@color/gray_100"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="2dp"
-                android:text="🔥 Sequência: 12 dias"
+                android:text="🔥 Sequência: 0 dias"
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Routine Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btn_routine_delete"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Excluir rotina"
+                android:src="@drawable/ic_delete"
+                app:tint="@color/text_secondary" />
+
+            <ImageButton
+                android:id="@+id/btn_routine_edit"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Editar rotina"
+                android:src="@drawable/ic_edit"
+                app:tint="@color/text_secondary" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_routine_complete"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Concluir Hoje ✓"
+                android:textSize="11sp"
+                app:backgroundTint="@color/module_5s" />
         </LinearLayout>
 
     </LinearLayout>

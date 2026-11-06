@@ -179,12 +179,23 @@ public class EisenhowerFragment extends Fragment implements EisenhowerTaskAdapte
     }
 
     private void updateCalendarSyncChip() {
-        if (GoogleCalendarService.hasCalendarPermissions(requireContext())) {
-            chipCalendarSync.setText("Agenda Conectada");
-            chipCalendarSync.setChipIconResource(R.drawable.ic_check);
-        } else {
-            chipCalendarSync.setText("Conectar Agenda");
+        if (!GoogleCalendarService.hasCalendarPermissions(requireContext())) {
+            chipCalendarSync.setText("Google Agenda não conectado");
             chipCalendarSync.setChipIconResource(R.drawable.ic_calendar);
+        } else {
+            boolean hasSyncedTask = false;
+            for (EisenhowerTask task : allTasksCache) {
+                if (task.isSyncedWithCalendar() && task.getGoogleCalendarEventId() > 0) {
+                    hasSyncedTask = true;
+                    break;
+                }
+            }
+            if (hasSyncedTask) {
+                chipCalendarSync.setText("Google Agenda: Sincronizado");
+            } else {
+                chipCalendarSync.setText("Google Agenda: Permissão concedida (Pronto)");
+            }
+            chipCalendarSync.setChipIconResource(R.drawable.ic_check);
         }
     }
 
@@ -399,6 +410,11 @@ public class EisenhowerFragment extends Fragment implements EisenhowerTaskAdapte
                         taskToSave.setGoogleCalendarEventId(eventId);
                         taskToSave.setSyncedWithCalendar(true);
                     }
+                } else if (!shouldSyncCalendar && taskToSave.getGoogleCalendarEventId() > 0) {
+                    // Desativar sincronização: remover evento do Google Agenda e limpar vínculo local (Seção 13.4)
+                    GoogleCalendarService.deleteTaskFromCalendar(requireContext(), taskToSave.getGoogleCalendarEventId());
+                    taskToSave.setGoogleCalendarEventId(0);
+                    taskToSave.setSyncedWithCalendar(false);
                 }
 
                 if (existingTask != null) {

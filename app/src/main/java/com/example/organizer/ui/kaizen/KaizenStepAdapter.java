@@ -67,18 +67,26 @@ public class KaizenStepAdapter extends RecyclerView.Adapter<KaizenStepAdapter.St
         }
 
         if (step.isAchieved()) {
+            // CONCLUÍDA
             holder.tvTitle.setPaintFlags(holder.tvTitle.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
             holder.tvStatusBadge.setText("Concluída ✓");
             holder.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.module_kaizen));
-        } else {
+            holder.itemView.setAlpha(0.85f);
+            holder.cbAchieved.setEnabled(true);
+        } else if (position == firstUnachievedIndex) {
+            // DISPONÍVEL
             holder.tvTitle.setPaintFlags(holder.tvTitle.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
-            if (position == firstUnachievedIndex) {
-                holder.tvStatusBadge.setText("Próxima Etapa Liberada");
-                holder.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.module_kanban));
-            } else {
-                holder.tvStatusBadge.setText("A Seguir");
-                holder.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.app_text_secondary));
-            }
+            holder.tvStatusBadge.setText("Disponível ★");
+            holder.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.module_kanban));
+            holder.itemView.setAlpha(1.0f);
+            holder.cbAchieved.setEnabled(true);
+        } else {
+            // BLOQUEADA (Não pode ser concluída antecipadamente)
+            holder.tvTitle.setPaintFlags(holder.tvTitle.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+            holder.tvStatusBadge.setText("Bloqueada 🔒");
+            holder.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.app_text_tertiary));
+            holder.itemView.setAlpha(0.5f);
+            holder.cbAchieved.setEnabled(false);
         }
 
         holder.cbAchieved.setOnCheckedChangeListener(null);

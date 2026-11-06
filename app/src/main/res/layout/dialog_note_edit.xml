@@ -55,7 +55,22 @@
             android:padding="12dp"
             android:textColor="@color/text_primary"
             android:textSize="13sp"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="6dp" />
+
+        <!-- Quick Tags Selector -->
+        <HorizontalScrollView
+            android:id="@+id/scroll_dialog_tags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_dialog_tags"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true" />
+        </HorizontalScrollView>
 
         <!-- Color Palette Selection -->
         <TextView

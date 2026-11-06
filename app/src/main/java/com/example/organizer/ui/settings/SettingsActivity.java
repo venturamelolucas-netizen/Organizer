@@ -108,6 +108,13 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btn_clear_all_data).setOnClickListener(v -> clearAllData());
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateCalendarStatus();
+        updateAiStatus();
+    }
+
     private void updateCalendarStatus() {
         if (GoogleCalendarService.hasCalendarPermissions(this)) {
             tvCalendarStatus.setText("Conectado");
@@ -136,11 +143,14 @@ public class SettingsActivity extends AppCompatActivity {
                 .setTitle("Recarregar Dados de Exemplo")
                 .setMessage("Deseja restaurar os dados de demonstração para todos os 8 módulos?")
                 .setPositiveButton("Recarregar", (d, w) -> {
+                    Toast.makeText(this, "Carregando dados de exemplo...", Toast.LENGTH_SHORT).show();
                     DatabaseClient.getInstance(this).getExecutor().execute(() -> {
                         SampleDataGenerator.preloadSampleData(DatabaseClient.getInstance(this).getDatabase());
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, R.string.sample_data_loaded, Toast.LENGTH_SHORT).show();
+                            NotificationHelper.vibrateFeedback(this, 40);
+                        });
                     });
-                    Toast.makeText(this, R.string.sample_data_loaded, Toast.LENGTH_SHORT).show();
-                    NotificationHelper.vibrateFeedback(this, 40);
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();
@@ -151,11 +161,25 @@ public class SettingsActivity extends AppCompatActivity {
                 .setTitle("Limpar Todos os Dados")
                 .setMessage("Atenção: todos os dados locais (quadros, metas, tarefas, notas, 5S e A3) serão apagados permanentemente.")
                 .setPositiveButton("Excluir Tudo", (d, w) -> {
+                    Toast.makeText(this, "Limpando dados...", Toast.LENGTH_SHORT).show();
                     DatabaseClient.getInstance(this).getExecutor().execute(() -> {
-                        SampleDataGenerator.clearAllData(DatabaseClient.getInstance(this).getDatabase());
+                        com.example.organizer.data.database.OrganizerDatabase db = DatabaseClient.getInstance(this).getDatabase();
+                        try {
+                            java.util.List<com.example.organizer.data.entity.EisenhowerTask> tasks = db.eisenhowerDao().getTasksWithCalendarEventSync();
+                            if (tasks != null) {
+                                for (com.example.organizer.data.entity.EisenhowerTask task : tasks) {
+                                    if (task.getGoogleCalendarEventId() > 0) {
+                                        GoogleCalendarService.deleteTaskFromCalendar(SettingsActivity.this, task.getGoogleCalendarEventId());
+                                    }
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                        SampleDataGenerator.clearAllData(db);
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, R.string.sample_data_cleared, Toast.LENGTH_SHORT).show();
+                            NotificationHelper.vibrateFeedback(this, 80);
+                        });
                     });
-                    Toast.makeText(this, R.string.sample_data_cleared, Toast.LENGTH_SHORT).show();
-                    NotificationHelper.vibrateFeedback(this, 80);
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();

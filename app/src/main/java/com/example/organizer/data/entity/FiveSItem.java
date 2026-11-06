@@ -43,6 +43,8 @@ public class FiveSItem {
     private String routineTime;      // "08:00"
     private boolean routineEnabled;
     private int streakCount;
+    private long lastExecutionDate;
+    private long nextExecutionDate;
 
     public FiveSItem(long projectId, String step, String name, String description) {
         this.projectId = projectId;
@@ -62,6 +64,8 @@ public class FiveSItem {
         this.routineTime = "09:00";
         this.routineEnabled = false;
         this.streakCount = 0;
+        this.lastExecutionDate = 0;
+        this.nextExecutionDate = 0;
     }
 
     public long getId() { return id; }
@@ -117,4 +121,10 @@ public class FiveSItem {
 
     public int getStreakCount() { return streakCount; }
     public void setStreakCount(int streakCount) { this.streakCount = streakCount; }
+
+    public long getLastExecutionDate() { return lastExecutionDate; }
+    public void setLastExecutionDate(long lastExecutionDate) { this.lastExecutionDate = lastExecutionDate; }
+
+    public long getNextExecutionDate() { return nextExecutionDate; }
+    public void setNextExecutionDate(long nextExecutionDate) { this.nextExecutionDate = nextExecutionDate; }
 }

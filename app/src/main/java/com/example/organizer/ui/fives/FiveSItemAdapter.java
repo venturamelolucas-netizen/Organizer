@@ -33,6 +33,11 @@ public class FiveSItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         void onSetDiscarded(FiveSItem item, boolean discarded);
         void onToggleCompleted(FiveSItem item, boolean completed);
         void onToggleRoutine(FiveSItem item, boolean enabled);
+        void onExecuteRoutine(FiveSItem item);
+        void onEditRoutine(FiveSItem item);
+        void onDeleteRoutine(FiveSItem item);
+        void onEditSeiton(FiveSItem item);
+        void onRemoveFromSeiton(FiveSItem item);
         void onDeleteItem(FiveSItem item);
     }
 
@@ -121,13 +126,30 @@ public class FiveSItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         holder.btnDiscard.setOnClickListener(v -> {
             if (listener != null) listener.onSetDiscarded(item, true);
         });
+
+        if (holder.btnDelete != null) {
+            holder.btnDelete.setOnClickListener(v -> {
+                if (listener != null) listener.onDeleteItem(item);
+            });
+        }
     }
 
     private void bindSeiton(SeitonViewHolder holder, FiveSItem item) {
         holder.tvName.setText(item.getName());
         holder.tvLocation.setText("Local: " + (item.getLocation().isEmpty() ? "Definir local" : item.getLocation()));
         holder.tvCategory.setText("Categoria: " + (item.getCategory().isEmpty() ? "Geral" : item.getCategory()));
-        holder.tvRule.setText("Regra de posicionamento: " + (item.getPlacementRule().isEmpty() ? "Armazenar no local demarcado" : item.getPlacementRule()));
+        holder.tvRule.setText("Regra: " + (item.getPlacementRule().isEmpty() ? "Armazenar no local demarcado" : item.getPlacementRule()));
+
+        if (holder.btnEdit != null) {
+            holder.btnEdit.setOnClickListener(v -> {
+                if (listener != null) listener.onEditSeiton(item);
+            });
+        }
+        if (holder.btnRemove != null) {
+            holder.btnRemove.setOnClickListener(v -> {
+                if (listener != null) listener.onRemoveFromSeiton(item);
+            });
+        }
     }
 
     private void bindSeiso(SeisoViewHolder holder, FiveSItem item) {
@@ -156,6 +178,34 @@ public class FiveSItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         holder.switchEnabled.setOnCheckedChangeListener((btn, isChecked) -> {
             if (listener != null) listener.onToggleRoutine(item, isChecked);
         });
+
+        if (holder.btnComplete != null) {
+            boolean doneToday = com.example.organizer.data.service.NotificationHelper.isSameDay(item.getLastExecutionDate(), System.currentTimeMillis());
+            if (doneToday) {
+                holder.btnComplete.setText("Concluído Hoje ✓");
+                holder.btnComplete.setEnabled(false);
+                holder.btnComplete.setAlpha(0.6f);
+            } else {
+                holder.btnComplete.setText("Concluir Hoje ✓");
+                holder.btnComplete.setEnabled(true);
+                holder.btnComplete.setAlpha(1.0f);
+            }
+            holder.btnComplete.setOnClickListener(v -> {
+                if (listener != null) listener.onExecuteRoutine(item);
+            });
+        }
+
+        if (holder.btnEdit != null) {
+            holder.btnEdit.setOnClickListener(v -> {
+                if (listener != null) listener.onEditRoutine(item);
+            });
+        }
+
+        if (holder.btnDelete != null) {
+            holder.btnDelete.setOnClickListener(v -> {
+                if (listener != null) listener.onDeleteRoutine(item);
+            });
+        }
     }
 
     @Override
@@ -168,6 +218,8 @@ public class FiveSItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         MaterialCardView cardRoot;
         TextView tvName, tvDesc, tvBadge;
         View btnDiscard, btnEssential;
+        ImageButton btnDelete;
+
         public SeiriViewHolder(@NonNull View itemView) {
             super(itemView);
             cardRoot = itemView.findViewById(R.id.card_seiri_root);
@@ -176,17 +228,22 @@ public class FiveSItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             tvBadge = itemView.findViewById(R.id.tv_seiri_badge);
             btnDiscard = itemView.findViewById(R.id.btn_seiri_discard);
             btnEssential = itemView.findViewById(R.id.btn_seiri_essential);
+            btnDelete = itemView.findViewById(R.id.btn_seiri_delete);
         }
     }
 
     static class SeitonViewHolder extends RecyclerView.ViewHolder {
         TextView tvName, tvLocation, tvCategory, tvRule;
+        View btnEdit, btnRemove;
+
         public SeitonViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tv_seiton_name);
             tvLocation = itemView.findViewById(R.id.tv_seiton_location);
             tvCategory = itemView.findViewById(R.id.tv_seiton_category);
             tvRule = itemView.findViewById(R.id.tv_seiton_rule);
+            btnEdit = itemView.findViewById(R.id.btn_seiton_edit);
+            btnRemove = itemView.findViewById(R.id.btn_seiton_remove);
         }
     }
 
@@ -194,6 +251,7 @@ public class FiveSItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         CheckBox cbCompleted;
         TextView tvTitle, tvDesc;
         ImageButton btnDelete;
+
         public SeisoViewHolder(@NonNull View itemView) {
             super(itemView);
             cbCompleted = itemView.findViewById(R.id.cb_seiso);
@@ -206,6 +264,9 @@ public class FiveSItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     static class RoutineViewHolder extends RecyclerView.ViewHolder {
         TextView tvName, tvDesc, tvTime, tvStreak;
         SwitchMaterial switchEnabled;
+        com.google.android.material.button.MaterialButton btnComplete;
+        ImageButton btnEdit, btnDelete;
+
         public RoutineViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tv_routine_name);
@@ -213,6 +274,9 @@ public class FiveSItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             tvTime = itemView.findViewById(R.id.tv_routine_time);
             tvStreak = itemView.findViewById(R.id.tv_routine_streak);
             switchEnabled = itemView.findViewById(R.id.switch_routine_enabled);
+            btnComplete = itemView.findViewById(R.id.btn_routine_complete);
+            btnEdit = itemView.findViewById(R.id.btn_routine_edit);
+            btnDelete = itemView.findViewById(R.id.btn_routine_delete);
         }
     }
 }
